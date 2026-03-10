@@ -27,12 +27,17 @@ let motionAnimId = null;
 let motionBound = false;
 let motionButton = null;
 const photoMotion = new WeakMap();
+let currentLightboxIndex = -1;
+let touchStartX = 0;
+let touchStartY = 0;
 
 function mediaKindFromName(name) {
   return VIDEO_EXT_RE.test(name) ? "video" : "image";
 }
 
 function openLightbox(src, altText, kind = "image") {
+  currentLightboxIndex = activePhotos.findIndex((item) => item.src === src);
+
   if (kind === "video") {
     lightboxImage.style.display = "none";
     lightboxImage.removeAttribute("src");
@@ -63,6 +68,17 @@ function closeLightbox() {
   lightbox.classList.remove("open");
   lightbox.setAttribute("aria-hidden", "true");
   document.body.style.overflow = "";
+  currentLightboxIndex = -1;
+}
+
+function openLightboxByIndex(index) {
+  if (!activePhotos.length) {
+    return;
+  }
+
+  const wrapped = ((index % activePhotos.length) + activePhotos.length) % activePhotos.length;
+  const item = activePhotos[wrapped];
+  openLightbox(item.src, item.caption || `Momento ${wrapped + 1}`, item.kind || "image");
 }
 
 function activateMonth(month) {
@@ -600,7 +616,44 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeLightbox();
   }
+  if (!lightbox.classList.contains("open")) {
+    return;
+  }
+  if (event.key === "ArrowRight") {
+    openLightboxByIndex(currentLightboxIndex + 1);
+  } else if (event.key === "ArrowLeft") {
+    openLightboxByIndex(currentLightboxIndex - 1);
+  }
 });
+
+lightbox.addEventListener("touchstart", (event) => {
+  if (!lightbox.classList.contains("open")) {
+    return;
+  }
+  const t = event.changedTouches[0];
+  touchStartX = t.clientX;
+  touchStartY = t.clientY;
+}, { passive: true });
+
+lightbox.addEventListener("touchend", (event) => {
+  if (!lightbox.classList.contains("open")) {
+    return;
+  }
+  const t = event.changedTouches[0];
+  const dx = t.clientX - touchStartX;
+  const dy = t.clientY - touchStartY;
+  const absX = Math.abs(dx);
+  const absY = Math.abs(dy);
+
+  // Horizontal swipe to switch media.
+  if (absX > 45 && absX > absY * 1.2) {
+    if (dx < 0) {
+      openLightboxByIndex(currentLightboxIndex + 1);
+    } else {
+      openLightboxByIndex(currentLightboxIndex - 1);
+    }
+  }
+}, { passive: true });
 
 ensureMotionPermissionButton();
 startMotionPhysics();
