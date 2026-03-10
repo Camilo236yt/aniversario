@@ -1,5 +1,4 @@
 const CENTER_IMAGE_NAME = "anillo.png";
-const IMAGE_EXT_RE = /\.(png|jpe?g|webp|gif|bmp|avif)$/i;
 const VIDEO_EXT_RE = /\.(mp4|webm|ogg|mov|m4v)$/i;
 const MEDIA_EXT_RE = /\.(png|jpe?g|webp|gif|bmp|avif|mp4|webm|ogg|mov|m4v)$/i;
 const SYNC_INTERVAL_MS = 5000;
