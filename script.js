@@ -297,14 +297,15 @@ function layoutPhotos() {
   const compact = orbitRect.width < 980;
   const cardW = sampleRect.width;
   const cardH = sampleRect.height;
-  const ringRadius = Math.max(ring.offsetWidth, ring.offsetHeight) / 2;
+  const ringRadiusX = ring.offsetWidth / 2;
+  const ringRadiusY = ring.offsetHeight / 2;
   const margin = compact ? 12 : 22;
-  const ringGap = compact ? 18 : 30;
+  const ringGap = compact ? 18 : 24;
 
   const maxRadiusX = Math.max(0, orbitRect.width / 2 - cardW / 2 - margin);
   const maxRadiusY = Math.max(0, orbitRect.height / 2 - cardH / 2 - margin);
-  const minRadiusX = ringRadius + cardW / 2 + ringGap;
-  const minRadiusY = ringRadius + cardH / 2 + ringGap;
+  const minRadiusX = ringRadiusX + (cardW * (compact ? 0.52 : 0.58)) + ringGap;
+  const minRadiusY = ringRadiusY + (cardH * (compact ? 0.48 : 0.56)) + ringGap;
   const startX = Math.min(minRadiusX, maxRadiusX);
   const startY = Math.min(minRadiusY, maxRadiusY);
   const ringSpanX = Math.max(0, maxRadiusX - startX);
@@ -336,6 +337,8 @@ function layoutPhotos() {
     ? clamp(1 - (activePhotos.length - 28) * (compact ? 0.015 : 0.011), compact ? 0.7 : 0.78, 1)
     : 1;
 
+  const gentleLayout = activePhotos.length <= 12;
+
   groups.forEach((group, ringIndex) => {
     if (!group.length) {
       return;
@@ -344,19 +347,25 @@ function layoutPhotos() {
     const ratio = ringCount === 1 ? 1 : ringIndex / (ringCount - 1);
     const radiusX = clamp(startX + ringSpanX * ratio, startX, maxRadiusX);
     const radiusY = clamp(startY + ringSpanY * ratio, startY, maxRadiusY);
-    const angleOffset = activePhotos.length <= 12
-      ? (-Math.PI / 2) + (ringIndex * 0.15)
+    const angleOffset = gentleLayout
+      ? (-Math.PI / 2)
       : rng() * Math.PI * 2;
     const angleStep = (Math.PI * 2) / group.length;
 
     group.forEach((card, index) => {
-      const jitter = (rng() - 0.5) * Math.min(0.18, angleStep * 0.2);
+      const jitterRange = gentleLayout
+        ? (compact ? 0.04 : 0.02)
+        : Math.min(0.18, angleStep * 0.2);
+      const jitter = (rng() - 0.5) * jitterRange;
       const angle = angleOffset + (index * angleStep) + jitter;
       const tx = Math.cos(angle) * radiusX;
       const ty = Math.sin(angle) * radiusY;
-      const tilt = Math.round((rng() - 0.5) * (compact ? 9 : 11));
+      const tilt = gentleLayout
+        ? Math.round((rng() - 0.5) * (compact ? 6 : 5))
+        : Math.round((rng() - 0.5) * (compact ? 9 : 11));
       const minScale = compact ? 0.66 : 0.76;
-      const scale = clamp(baseScale + (rng() - 0.5) * 0.04, minScale, 1.02);
+      const scaleSpread = gentleLayout ? 0.02 : 0.04;
+      const scale = clamp(baseScale + (rng() - 0.5) * scaleSpread, minScale, 1.02);
 
       card.style.setProperty("--tx", `${tx.toFixed(1)}px`);
       card.style.setProperty("--ty", `${ty.toFixed(1)}px`);
