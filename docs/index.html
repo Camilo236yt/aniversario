@@ -21,8 +21,8 @@
       --gold: #d6b17a;
       --panel: rgba(255, 247, 251, 0.82);
       --panel-border: rgba(255, 236, 244, 0.95);
-      --photo-w: clamp(130px, 12vw, 180px);
-      --photo-h: clamp(160px, 15vw, 225px);
+      --photo-w: clamp(142px, 13vw, 194px);
+      --photo-h: clamp(176px, 16vw, 242px);
       --ring-w: clamp(170px, 16vw, 230px);
       --ring-h: clamp(226px, 20vw, 305px);
       --shadow-soft: 0 18px 45px rgba(92, 52, 65, 0.15);
@@ -866,7 +866,7 @@
     }
 
     .photo:hover {
-      transform: translate(-50%, -50%) translate(calc(var(--tx) + var(--mx)), calc(var(--ty) + var(--my) - 8px)) rotate(calc((var(--r) * 0.36) + var(--mr))) scale(calc(var(--s) + 0.04));
+      transform: translate(-50%, -50%) translate(calc(var(--tx) + var(--mx)), calc(var(--ty) + var(--my) - 8px)) rotate(calc((var(--r) * 0.36) + var(--mr))) scale(var(--s));
       box-shadow: 0 22px 40px rgba(84, 46, 58, 0.24);
       filter: saturate(1.03);
       z-index: 9;
@@ -1122,7 +1122,7 @@
     @keyframes photoIn {
       from {
         opacity: 0;
-        transform: translate(-50%, -50%) translate(calc(var(--tx) + var(--mx)), calc(var(--ty) + var(--my) + 14px)) rotate(calc(var(--r) + var(--mr))) scale(calc(var(--s) * 0.9));
+        transform: translate(-50%, -50%) translate(calc(var(--tx) + var(--mx)), calc(var(--ty) + var(--my) + 14px)) rotate(calc(var(--r) + var(--mr))) scale(var(--s));
       }
       to {
         opacity: 1;
@@ -1132,10 +1132,10 @@
 
     @keyframes reflowCard {
       0% {
-        transform: translate(-50%, -50%) translate(calc(var(--tx) + var(--mx)), calc(var(--ty) + var(--my))) rotate(calc(var(--r) + var(--mr))) scale(calc(var(--s) * 0.95));
+        transform: translate(-50%, -50%) translate(calc(var(--tx) + var(--mx)), calc(var(--ty) + var(--my))) rotate(calc(var(--r) + var(--mr))) scale(var(--s));
       }
       45% {
-        transform: translate(-50%, -50%) translate(calc(var(--tx) + var(--mx)), calc(var(--ty) + var(--my))) rotate(calc((var(--r) * 0.6) + var(--mr))) scale(calc(var(--s) * 1.03));
+        transform: translate(-50%, -50%) translate(calc(var(--tx) + var(--mx)), calc(var(--ty) + var(--my))) rotate(calc((var(--r) * 0.6) + var(--mr))) scale(var(--s));
       }
       100% {
         transform: translate(-50%, -50%) translate(calc(var(--tx) + var(--mx)), calc(var(--ty) + var(--my))) rotate(calc(var(--r) + var(--mr))) scale(var(--s));
@@ -1157,6 +1157,8 @@
 
       .album {
         border-radius: 20px;
+        display: flex;
+        flex-direction: column;
       }
 
       .album::before {
@@ -1164,17 +1166,21 @@
       }
 
       .orbit {
-        height: 100%;
+        height: auto;
+        flex: 1 1 auto;
+        min-height: 0;
       }
 
       .signature {
         position: static;
         text-align: center;
-        margin: 0.35rem 0 0.7rem;
+        margin: 0.2rem 0 0.55rem;
+        flex: 0 0 auto;
+        z-index: 3;
       }
 
       .photo:hover {
-        transform: translate(-50%, -50%) translate(calc(var(--tx) + var(--mx)), calc(var(--ty) + var(--my) - 5px)) rotate(calc((var(--r) * 0.35) + var(--mr))) scale(calc(var(--s) + 0.03));
+        transform: translate(-50%, -50%) translate(calc(var(--tx) + var(--mx)), calc(var(--ty) + var(--my) - 5px)) rotate(calc((var(--r) * 0.35) + var(--mr))) scale(var(--s));
       }
 
       .edge-flower {
@@ -1227,7 +1233,9 @@
       }
 
       .orbit {
-        height: 100%;
+        height: auto;
+        flex: 1 1 auto;
+        min-height: 0;
       }
 
       .photo {

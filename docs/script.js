@@ -263,6 +263,7 @@ function renderPhotos() {
     card.dataset.kind = item.kind || "image";
     card.style.setProperty("--i", String(index));
     card.style.setProperty("--depth", (0.75 + (index % 4) * 0.12).toFixed(2));
+    card.style.setProperty("--s", "1");
     card.style.setProperty("--mx", "0px");
     card.style.setProperty("--my", "0px");
     card.style.setProperty("--mr", "0deg");
@@ -354,8 +355,8 @@ function applyMotion(now = performance.now()) {
 }
 
 function updateMotion(normalizedX, normalizedY) {
-  motionTargetX = clamp(normalizedX, -1, 1) * 14;
-  motionTargetY = clamp(normalizedY, -1, 1) * 10;
+  motionTargetX = clamp(normalizedX, -2.2, 2.2) * 26;
+  motionTargetY = clamp(normalizedY, -2.2, 2.2) * 20;
 }
 
 function startMotionPhysics() {
@@ -376,12 +377,18 @@ function bindDeviceMotion() {
     return;
   }
   motionBound = true;
-  window.addEventListener("deviceorientation", (event) => {
-    if (event.gamma == null || event.beta == null) {
+  window.addEventListener("devicemotion", (event) => {
+    const acc = event.accelerationIncludingGravity || event.acceleration;
+    if (!acc) {
       return;
     }
-    const nx = event.gamma / 28;
-    const ny = event.beta / 42;
+
+    // Movement-based input: reacts to phone shifts (left/right, up/down),
+    // without relying on orientation angles.
+    const ax = typeof acc.x === "number" ? acc.x : 0;
+    const ay = typeof acc.y === "number" ? acc.y : 0;
+    const nx = clamp(ax / 2.2, -2.2, 2.2);
+    const ny = clamp((-ay) / 2.6, -2.2, 2.2);
     updateMotion(nx, ny);
   }, { passive: true });
 }
@@ -457,10 +464,6 @@ function layoutPhotos() {
     groups[index % ringCount].push(card);
   });
 
-  const baseScale = activePhotos.length > 22
-    ? clamp(1 - (activePhotos.length - 22) * (compact ? 0.018 : 0.013), compact ? 0.62 : 0.72, 1)
-    : 1;
-
   const gentleLayout = activePhotos.length <= 16;
 
   groups.forEach((group, ringIndex) => {
@@ -475,10 +478,6 @@ function layoutPhotos() {
     const angleOffset = gentleLayout
       ? (-Math.PI / 2) + (ringIndex % 2 ? angleStep / 2 : 0)
       : rng() * Math.PI * 2;
-    const arcLength = Math.max(1, Math.min(radiusX, radiusY) * angleStep);
-    const targetSpacing = cardW * (compact ? 0.94 : 0.9);
-    const densityScale = clamp(arcLength / targetSpacing, compact ? 0.68 : 0.74, 1);
-
     group.forEach((card, index) => {
       const jitterRange = gentleLayout
         ? (compact ? 0.03 : 0.018)
@@ -490,14 +489,9 @@ function layoutPhotos() {
       const tilt = gentleLayout
         ? Math.round((rng() - 0.5) * (compact ? 6 : 5))
         : Math.round((rng() - 0.5) * (compact ? 9 : 11));
-      const minScale = compact ? 0.66 : 0.76;
-      const scaleSpread = gentleLayout ? 0.02 : 0.04;
-      const scale = clamp((baseScale * densityScale) + (rng() - 0.5) * scaleSpread, minScale, 1.02);
-
       card.style.setProperty("--tx", `${tx.toFixed(1)}px`);
       card.style.setProperty("--ty", `${ty.toFixed(1)}px`);
       card.style.setProperty("--r", `${tilt}deg`);
-      card.style.setProperty("--s", scale.toFixed(3));
     });
   });
 }
