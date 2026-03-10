@@ -299,8 +299,8 @@ function layoutPhotos() {
   const cardH = sampleRect.height;
   const ringRadiusX = ring.offsetWidth / 2;
   const ringRadiusY = ring.offsetHeight / 2;
-  const margin = compact ? 12 : 22;
-  const ringGap = compact ? 18 : 24;
+  const margin = compact ? 14 : 28;
+  const ringGap = compact ? 18 : 22;
 
   const maxRadiusX = Math.max(0, orbitRect.width / 2 - cardW / 2 - margin);
   const maxRadiusY = Math.max(0, orbitRect.height / 2 - cardH / 2 - margin);
@@ -310,10 +310,9 @@ function layoutPhotos() {
   const startY = Math.min(minRadiusY, maxRadiusY);
   const ringSpanX = Math.max(0, maxRadiusX - startX);
   const ringSpanY = Math.max(0, maxRadiusY - startY);
-
   const desiredRings = compact
-    ? (activePhotos.length > 26 ? 3 : activePhotos.length > 14 ? 2 : 1)
-    : (activePhotos.length > 36 ? 4 : activePhotos.length > 22 ? 3 : activePhotos.length > 12 ? 2 : 1);
+    ? (activePhotos.length > 20 ? 3 : activePhotos.length > 6 ? 2 : 1)
+    : (activePhotos.length > 30 ? 4 : activePhotos.length > 14 ? 3 : activePhotos.length > 7 ? 2 : 1);
   const fitByX = Math.max(1, Math.floor(ringSpanX / (cardW * (compact ? 0.82 : 0.7))) + 1);
   const fitByY = Math.max(1, Math.floor(ringSpanY / (cardH * (compact ? 0.8 : 0.65))) + 1);
   const ringCount = Math.min(desiredRings, Math.min(fitByX, fitByY));
@@ -333,11 +332,11 @@ function layoutPhotos() {
     groups[index % ringCount].push(card);
   });
 
-  const baseScale = activePhotos.length > 28
-    ? clamp(1 - (activePhotos.length - 28) * (compact ? 0.015 : 0.011), compact ? 0.7 : 0.78, 1)
+  const baseScale = activePhotos.length > 22
+    ? clamp(1 - (activePhotos.length - 22) * (compact ? 0.018 : 0.013), compact ? 0.62 : 0.72, 1)
     : 1;
 
-  const gentleLayout = activePhotos.length <= 12;
+  const gentleLayout = activePhotos.length <= 16;
 
   groups.forEach((group, ringIndex) => {
     if (!group.length) {
@@ -347,14 +346,17 @@ function layoutPhotos() {
     const ratio = ringCount === 1 ? 1 : ringIndex / (ringCount - 1);
     const radiusX = clamp(startX + ringSpanX * ratio, startX, maxRadiusX);
     const radiusY = clamp(startY + ringSpanY * ratio, startY, maxRadiusY);
-    const angleOffset = gentleLayout
-      ? (-Math.PI / 2)
-      : rng() * Math.PI * 2;
     const angleStep = (Math.PI * 2) / group.length;
+    const angleOffset = gentleLayout
+      ? (-Math.PI / 2) + (ringIndex % 2 ? angleStep / 2 : 0)
+      : rng() * Math.PI * 2;
+    const arcLength = Math.max(1, Math.min(radiusX, radiusY) * angleStep);
+    const targetSpacing = cardW * (compact ? 0.94 : 0.9);
+    const densityScale = clamp(arcLength / targetSpacing, compact ? 0.68 : 0.74, 1);
 
     group.forEach((card, index) => {
       const jitterRange = gentleLayout
-        ? (compact ? 0.04 : 0.02)
+        ? (compact ? 0.03 : 0.018)
         : Math.min(0.18, angleStep * 0.2);
       const jitter = (rng() - 0.5) * jitterRange;
       const angle = angleOffset + (index * angleStep) + jitter;
@@ -365,7 +367,7 @@ function layoutPhotos() {
         : Math.round((rng() - 0.5) * (compact ? 9 : 11));
       const minScale = compact ? 0.66 : 0.76;
       const scaleSpread = gentleLayout ? 0.02 : 0.04;
-      const scale = clamp(baseScale + (rng() - 0.5) * scaleSpread, minScale, 1.02);
+      const scale = clamp((baseScale * densityScale) + (rng() - 0.5) * scaleSpread, minScale, 1.02);
 
       card.style.setProperty("--tx", `${tx.toFixed(1)}px`);
       card.style.setProperty("--ty", `${ty.toFixed(1)}px`);
