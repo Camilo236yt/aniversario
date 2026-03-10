@@ -234,11 +234,11 @@ async function readFromDirectoryListing() {
 
 async function getCollection() {
   try {
-    return await readFromDirectoryListing();
-  } catch (_listingError) {
+    return await readFromJson();
+  } catch (_jsonError) {
     try {
-      return await readFromJson();
-    } catch (_jsonError) {
+      return await readFromDirectoryListing();
+    } catch (_listingError) {
       return fallbackCollection();
     }
   }
@@ -462,3 +462,4 @@ document.addEventListener("keydown", (event) => {
     closeLightbox();
   }
 });
+

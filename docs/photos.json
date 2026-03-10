@@ -1,14 +1,14 @@
 {
   "center": "anillo.png",
   "photos": [
-    "x-meses/mes-01/momento-01.png",
-    "x-meses/mes-01/momento-02.png",
-    "x-meses/mes-01/momento-03.png",
-    "x-meses/mes-01/momento-04.png",
-    "x-meses/mes-01/momento-05.png",
-    "x-meses/mes-01/momento-06.png",
-    "x-meses/mes-01/momento-07.png",
-    "x-meses/mes-01/momento-08.png",
-    "x-meses/mes-01/momento-09.png"
+    "momento-01.png",
+    "momento-02.png",
+    "momento-03.png",
+    "momento-04.png",
+    "momento-05.png",
+    "momento-06.png",
+    "momento-07.png",
+    "momento-08.png",
+    "momento-09.png"
   ]
 }
