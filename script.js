@@ -1,0 +1,464 @@
+const CENTER_IMAGE_NAME = "anillo.png";
+const IMAGE_EXT_RE = /\.(png|jpe?g|webp|gif|bmp|avif)$/i;
+const VIDEO_EXT_RE = /\.(mp4|webm|ogg|mov|m4v)$/i;
+const MEDIA_EXT_RE = /\.(png|jpe?g|webp|gif|bmp|avif|mp4|webm|ogg|mov|m4v)$/i;
+const SYNC_INTERVAL_MS = 5000;
+const LIMIT_STEP = 8;
+
+const orbit = document.getElementById("orbit");
+const ringButton = orbit.querySelector(".ring-center");
+const ringImage = ringButton.querySelector("img");
+const lightbox = document.getElementById("lightbox");
+const lightboxImage = document.getElementById("lightboxImage");
+const lightboxVideo = document.getElementById("lightboxVideo");
+const closeButton = document.getElementById("close");
+const monthTabs = Array.from(document.querySelectorAll(".book-tab"));
+const monthPages = Array.from(document.querySelectorAll("[data-month-page]"));
+
+let activePhotos = [];
+let previousSignature = "";
+let previousLimitBucket = 1;
+let layoutSeed = Math.floor(Math.random() * 2147483647);
+let syncTimer = null;
+let reflowTimer = null;
+
+function mediaKindFromName(name) {
+  return VIDEO_EXT_RE.test(name) ? "video" : "image";
+}
+
+function openLightbox(src, altText, kind = "image") {
+  if (kind === "video") {
+    lightboxImage.style.display = "none";
+    lightboxImage.removeAttribute("src");
+    lightboxVideo.style.display = "block";
+    lightboxVideo.src = src;
+    lightboxVideo.setAttribute("aria-label", altText || "Video ampliado");
+    lightboxVideo.load();
+    lightboxVideo.play().catch(() => {});
+  } else {
+    lightboxVideo.pause();
+    lightboxVideo.style.display = "none";
+    lightboxVideo.removeAttribute("src");
+    lightboxImage.style.display = "block";
+    lightboxImage.src = src;
+    lightboxImage.alt = altText;
+  }
+
+  lightbox.classList.add("open");
+  lightbox.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+}
+
+function closeLightbox() {
+  lightboxVideo.pause();
+  lightboxVideo.style.display = "none";
+  lightboxVideo.removeAttribute("src");
+  lightboxImage.style.display = "block";
+  lightbox.classList.remove("open");
+  lightbox.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
+}
+
+function activateMonth(month) {
+  monthTabs.forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.month === month);
+  });
+
+  monthPages.forEach((page) => {
+    const active = page.dataset.monthPage === month;
+    page.classList.toggle("active", active);
+    page.setAttribute("aria-hidden", active ? "false" : "true");
+  });
+
+  if (month !== "1") {
+    closeLightbox();
+  } else {
+    layoutPhotos();
+  }
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function createRng(seed) {
+  let t = seed >>> 0;
+  return function next() {
+    t += 0x6D2B79F5;
+    let x = Math.imul(t ^ (t >>> 15), 1 | t);
+    x ^= x + Math.imul(x ^ (x >>> 7), 61 | x);
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function collectionSignature(collection) {
+  const items = collection.photos.map((item) => item.key || item.name.toLowerCase()).join("|");
+  return `${collection.centerKey || collection.centerName.toLowerCase()}|${items}`;
+}
+
+function fallbackCollection() {
+  return {
+    centerName: CENTER_IMAGE_NAME,
+    centerKey: CENTER_IMAGE_NAME,
+    centerSrc: CENTER_IMAGE_NAME,
+    photos: []
+  };
+}
+
+function normalizeCollection(data) {
+  const centerRaw = typeof data?.center === "string" ? data.center.trim() : CENTER_IMAGE_NAME;
+  const centerName = centerRaw || CENTER_IMAGE_NAME;
+  const photosRaw = Array.isArray(data?.photos) ? data.photos : [];
+
+  const cleanPhotos = photosRaw
+    .map((entry, index) => {
+      if (typeof entry === "string") {
+        const name = entry.trim();
+        if (!name) {
+          return null;
+        }
+        return {
+          name,
+          src: name,
+          key: name.toLowerCase(),
+          kind: mediaKindFromName(name),
+          caption: `Momento ${index + 1}`
+        };
+      }
+
+      if (entry && typeof entry === "object" && typeof entry.src === "string") {
+        const src = entry.src.trim();
+        if (!src) {
+          return null;
+        }
+        const baseName = src.split("/").pop() || src;
+        return {
+          name: baseName,
+          src,
+          key: src.toLowerCase(),
+          kind: mediaKindFromName(src),
+          caption: typeof entry.caption === "string" && entry.caption.trim()
+            ? entry.caption.trim()
+            : `Momento ${index + 1}`
+        };
+      }
+
+      return null;
+    })
+    .filter((item) => item && MEDIA_EXT_RE.test(item.src) && item.src.toLowerCase() !== centerName.toLowerCase());
+
+  const uniqueMap = new Map();
+  cleanPhotos.forEach((item) => {
+    if (!uniqueMap.has(item.key)) {
+      uniqueMap.set(item.key, item);
+    }
+  });
+
+  const unique = Array.from(uniqueMap.values()).sort((a, b) => a.name.localeCompare(b.name, "es", { numeric: true }));
+
+  return {
+    centerName,
+    centerKey: centerName.toLowerCase(),
+    centerSrc: centerName,
+    photos: unique
+  };
+}
+
+async function readFromJson() {
+  const response = await fetch("photos.json", { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error("photos-json-unavailable");
+  }
+
+  const data = await response.json();
+  const normalized = normalizeCollection(data);
+  if (!normalized.photos.length) {
+    throw new Error("photos-json-empty");
+  }
+  return normalized;
+}
+
+async function readFromDirectoryListing() {
+  const response = await fetch("./", { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error("listing-unavailable");
+  }
+
+  const html = await response.text();
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const files = [];
+
+  doc.querySelectorAll("a[href]").forEach((anchor) => {
+    const rawHref = anchor.getAttribute("href");
+    if (!rawHref || rawHref.startsWith("#") || rawHref.startsWith("?")) {
+      return;
+    }
+
+    let fileName = "";
+    try {
+      const url = new URL(rawHref, window.location.href);
+      fileName = decodeURIComponent(url.pathname.split("/").pop() || "");
+    } catch (_error) {
+      fileName = decodeURIComponent(rawHref.split("/").pop() || "");
+    }
+
+    if (fileName && MEDIA_EXT_RE.test(fileName)) {
+      files.push(fileName);
+    }
+  });
+
+  const unique = Array.from(new Set(files));
+  if (!unique.length) {
+    throw new Error("listing-empty");
+  }
+
+  const centerName = unique.find((name) => name.toLowerCase() === CENTER_IMAGE_NAME) || CENTER_IMAGE_NAME;
+  const photos = unique
+    .filter((name) => name.toLowerCase() !== centerName.toLowerCase())
+    .sort((a, b) => a.localeCompare(b, "es", { numeric: true }))
+    .map((name, index) => ({
+      name,
+      src: name,
+      key: name.toLowerCase(),
+      kind: mediaKindFromName(name),
+      caption: `Momento ${index + 1}`
+    }));
+
+  return {
+    centerName,
+    centerKey: centerName.toLowerCase(),
+    centerSrc: centerName,
+    photos
+  };
+}
+
+async function getCollection() {
+  try {
+    return await readFromDirectoryListing();
+  } catch (_listingError) {
+    try {
+      return await readFromJson();
+    } catch (_jsonError) {
+      return fallbackCollection();
+    }
+  }
+}
+
+function renderPhotos() {
+  orbit.querySelectorAll(".photo").forEach((node) => node.remove());
+
+  const fragment = document.createDocumentFragment();
+  activePhotos.forEach((item, index) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "photo";
+    card.dataset.src = item.src;
+    card.dataset.kind = item.kind || "image";
+    card.style.setProperty("--i", String(index));
+
+    if ((item.kind || "image") === "video") {
+      const video = document.createElement("video");
+      video.src = item.src;
+      video.muted = true;
+      video.loop = true;
+      video.autoplay = true;
+      video.playsInline = true;
+      video.preload = "metadata";
+      video.setAttribute("aria-label", item.caption || `Video ${index + 1}`);
+      card.appendChild(video);
+    } else {
+      const img = document.createElement("img");
+      img.src = item.src;
+      img.alt = item.caption || `Recuerdo ${index + 1}`;
+      img.loading = "lazy";
+      card.appendChild(img);
+    }
+
+    const caption = document.createElement("p");
+    caption.className = "caption";
+    caption.textContent = item.caption || `Momento ${index + 1}`;
+
+    card.appendChild(caption);
+    fragment.appendChild(card);
+  });
+
+  orbit.appendChild(fragment);
+}
+
+function layoutPhotos() {
+  const cards = Array.from(orbit.querySelectorAll(".photo"));
+  const ring = orbit.querySelector(".ring-center");
+  if (!cards.length || !ring) {
+    return;
+  }
+
+  const orbitRect = orbit.getBoundingClientRect();
+  const sampleRect = cards[0].getBoundingClientRect();
+  const compact = orbitRect.width < 980;
+  const cardW = sampleRect.width;
+  const cardH = sampleRect.height;
+  const ringRadius = Math.max(ring.offsetWidth, ring.offsetHeight) / 2;
+  const margin = compact ? 12 : 22;
+  const ringGap = compact ? 18 : 30;
+
+  const maxRadiusX = Math.max(0, orbitRect.width / 2 - cardW / 2 - margin);
+  const maxRadiusY = Math.max(0, orbitRect.height / 2 - cardH / 2 - margin);
+  const minRadiusX = ringRadius + cardW / 2 + ringGap;
+  const minRadiusY = ringRadius + cardH / 2 + ringGap;
+  const startX = Math.min(minRadiusX, maxRadiusX);
+  const startY = Math.min(minRadiusY, maxRadiusY);
+  const ringSpanX = Math.max(0, maxRadiusX - startX);
+  const ringSpanY = Math.max(0, maxRadiusY - startY);
+
+  const desiredRings = compact
+    ? (activePhotos.length > 26 ? 3 : activePhotos.length > 14 ? 2 : 1)
+    : (activePhotos.length > 36 ? 4 : activePhotos.length > 22 ? 3 : activePhotos.length > 12 ? 2 : 1);
+  const fitByX = Math.max(1, Math.floor(ringSpanX / (cardW * (compact ? 0.82 : 0.7))) + 1);
+  const fitByY = Math.max(1, Math.floor(ringSpanY / (cardH * (compact ? 0.8 : 0.65))) + 1);
+  const ringCount = Math.min(desiredRings, Math.min(fitByX, fitByY));
+
+  const groups = Array.from({ length: ringCount }, () => []);
+  const rng = createRng(layoutSeed + activePhotos.length * 97);
+  const shuffled = cards.slice();
+
+  if (activePhotos.length > 12) {
+    for (let i = shuffled.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(rng() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+  }
+
+  shuffled.forEach((card, index) => {
+    groups[index % ringCount].push(card);
+  });
+
+  const baseScale = activePhotos.length > 28
+    ? clamp(1 - (activePhotos.length - 28) * (compact ? 0.015 : 0.011), compact ? 0.7 : 0.78, 1)
+    : 1;
+
+  groups.forEach((group, ringIndex) => {
+    if (!group.length) {
+      return;
+    }
+
+    const ratio = ringCount === 1 ? 1 : ringIndex / (ringCount - 1);
+    const radiusX = clamp(startX + ringSpanX * ratio, startX, maxRadiusX);
+    const radiusY = clamp(startY + ringSpanY * ratio, startY, maxRadiusY);
+    const angleOffset = activePhotos.length <= 12
+      ? (-Math.PI / 2) + (ringIndex * 0.15)
+      : rng() * Math.PI * 2;
+    const angleStep = (Math.PI * 2) / group.length;
+
+    group.forEach((card, index) => {
+      const jitter = (rng() - 0.5) * Math.min(0.18, angleStep * 0.2);
+      const angle = angleOffset + (index * angleStep) + jitter;
+      const tx = Math.cos(angle) * radiusX;
+      const ty = Math.sin(angle) * radiusY;
+      const tilt = Math.round((rng() - 0.5) * (compact ? 9 : 11));
+      const minScale = compact ? 0.66 : 0.76;
+      const scale = clamp(baseScale + (rng() - 0.5) * 0.04, minScale, 1.02);
+
+      card.style.setProperty("--tx", `${tx.toFixed(1)}px`);
+      card.style.setProperty("--ty", `${ty.toFixed(1)}px`);
+      card.style.setProperty("--r", `${tilt}deg`);
+      card.style.setProperty("--s", scale.toFixed(3));
+    });
+  });
+}
+
+function triggerReflowAnimation() {
+  orbit.classList.remove("reflow");
+  if (reflowTimer) {
+    clearTimeout(reflowTimer);
+  }
+  requestAnimationFrame(() => {
+    orbit.classList.add("reflow");
+    reflowTimer = setTimeout(() => {
+      orbit.classList.remove("reflow");
+    }, 1000);
+  });
+}
+
+async function refreshCollection({ forceShuffle = false } = {}) {
+  const collection = await getCollection();
+  const signature = collectionSignature(collection);
+  const changed = signature !== previousSignature;
+
+  if (!changed && !forceShuffle) {
+    layoutPhotos();
+    return;
+  }
+
+  closeLightbox();
+  activePhotos = collection.photos;
+  ringButton.dataset.src = collection.centerSrc;
+  ringButton.dataset.kind = "image";
+  ringImage.src = collection.centerSrc;
+  previousSignature = signature;
+
+  const nextLimitBucket = Math.max(1, Math.ceil(activePhotos.length / LIMIT_STEP));
+  const crossedLimit = nextLimitBucket !== previousLimitBucket;
+  previousLimitBucket = nextLimitBucket;
+
+  if (changed || crossedLimit || forceShuffle) {
+    layoutSeed = Math.floor(Math.random() * 2147483647);
+  }
+
+  renderPhotos();
+  layoutPhotos();
+  triggerReflowAnimation();
+}
+
+function startSyncLoop() {
+  if (syncTimer) {
+    clearInterval(syncTimer);
+  }
+
+  syncTimer = setInterval(() => {
+    refreshCollection();
+  }, SYNC_INTERVAL_MS);
+}
+
+refreshCollection({ forceShuffle: true });
+startSyncLoop();
+
+window.addEventListener("load", () => refreshCollection());
+window.addEventListener("resize", () => layoutPhotos());
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    refreshCollection();
+  }
+});
+
+monthTabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    activateMonth(tab.dataset.month || "1");
+  });
+});
+
+orbit.addEventListener("click", (event) => {
+  const target = event.target.closest("[data-src]");
+  if (!target) {
+    return;
+  }
+
+  const src = target.dataset.src;
+  const kind = target.dataset.kind || "image";
+  const altText = target.querySelector("img")?.alt || target.querySelector(".caption")?.textContent || "Media ampliada";
+  openLightbox(src, altText, kind);
+});
+
+closeButton.addEventListener("click", closeLightbox);
+
+lightbox.addEventListener("click", (event) => {
+  if (event.target === lightbox) {
+    closeLightbox();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeLightbox();
+  }
+});
