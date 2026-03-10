@@ -809,14 +809,17 @@
     .photo {
       --tx: 0px;
       --ty: 0px;
+      --mx: 0px;
+      --my: 0px;
+      --mr: 0deg;
       --r: 0deg;
       --s: 1;
       position: absolute;
       left: 50%;
       top: 50%;
       width: var(--photo-w);
-      transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) rotate(var(--r)) scale(var(--s));
-      transform-origin: center;
+      transform: translate(-50%, -50%) translate(calc(var(--tx) + var(--mx)), calc(var(--ty) + var(--my))) rotate(calc(var(--r) + var(--mr))) scale(var(--s));
+      transform-origin: 50% 8%;
       border: 0;
       border-radius: 16px;
       padding: 0.52rem 0.52rem 0.62rem;
@@ -824,7 +827,7 @@
       box-shadow: var(--shadow-card);
       cursor: pointer;
       z-index: 3;
-      transition: transform 260ms ease, box-shadow 260ms ease, filter 260ms ease;
+      transition: box-shadow 260ms ease, filter 260ms ease;
       animation: photoIn 650ms cubic-bezier(.2,.82,.29,1) both;
       animation-delay: calc(var(--i) * 55ms);
     }
@@ -863,7 +866,7 @@
     }
 
     .photo:hover {
-      transform: translate(-50%, -50%) translate(var(--tx), calc(var(--ty) - 8px)) rotate(calc(var(--r) * 0.36)) scale(calc(var(--s) + 0.04));
+      transform: translate(-50%, -50%) translate(calc(var(--tx) + var(--mx)), calc(var(--ty) + var(--my) - 8px)) rotate(calc((var(--r) * 0.36) + var(--mr))) scale(calc(var(--s) + 0.04));
       box-shadow: 0 22px 40px rgba(84, 46, 58, 0.24);
       filter: saturate(1.03);
       z-index: 9;
@@ -967,6 +970,21 @@
       padding: 0.2rem 0.48rem;
       cursor: pointer;
       text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+    }
+
+    .motion-toggle {
+      position: fixed;
+      right: 14px;
+      bottom: 14px;
+      z-index: 45;
+      border: 1px solid rgba(194, 126, 152, 0.6);
+      border-radius: 999px;
+      padding: 0.42rem 0.75rem;
+      font: 600 0.88rem/1 "Cormorant Garamond", Georgia, serif;
+      color: #7c3e56;
+      background: rgba(255, 241, 248, 0.92);
+      box-shadow: 0 6px 16px rgba(118, 69, 86, 0.2);
+      cursor: pointer;
     }
 
     .orbit.reflow .photo {
@@ -1104,23 +1122,23 @@
     @keyframes photoIn {
       from {
         opacity: 0;
-        transform: translate(-50%, -50%) translate(var(--tx), calc(var(--ty) + 14px)) rotate(var(--r)) scale(calc(var(--s) * 0.9));
+        transform: translate(-50%, -50%) translate(calc(var(--tx) + var(--mx)), calc(var(--ty) + var(--my) + 14px)) rotate(calc(var(--r) + var(--mr))) scale(calc(var(--s) * 0.9));
       }
       to {
         opacity: 1;
-        transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) rotate(var(--r)) scale(var(--s));
+        transform: translate(-50%, -50%) translate(calc(var(--tx) + var(--mx)), calc(var(--ty) + var(--my))) rotate(calc(var(--r) + var(--mr))) scale(var(--s));
       }
     }
 
     @keyframes reflowCard {
       0% {
-        transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) rotate(var(--r)) scale(calc(var(--s) * 0.95));
+        transform: translate(-50%, -50%) translate(calc(var(--tx) + var(--mx)), calc(var(--ty) + var(--my))) rotate(calc(var(--r) + var(--mr))) scale(calc(var(--s) * 0.95));
       }
       45% {
-        transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) rotate(calc(var(--r) * 0.6)) scale(calc(var(--s) * 1.03));
+        transform: translate(-50%, -50%) translate(calc(var(--tx) + var(--mx)), calc(var(--ty) + var(--my))) rotate(calc((var(--r) * 0.6) + var(--mr))) scale(calc(var(--s) * 1.03));
       }
       100% {
-        transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) rotate(var(--r)) scale(var(--s));
+        transform: translate(-50%, -50%) translate(calc(var(--tx) + var(--mx)), calc(var(--ty) + var(--my))) rotate(calc(var(--r) + var(--mr))) scale(var(--s));
       }
     }
 
@@ -1156,7 +1174,7 @@
       }
 
       .photo:hover {
-        transform: translate(-50%, -50%) translate(var(--tx), calc(var(--ty) - 5px)) rotate(calc(var(--r) * 0.35)) scale(calc(var(--s) + 0.03));
+        transform: translate(-50%, -50%) translate(calc(var(--tx) + var(--mx)), calc(var(--ty) + var(--my) - 5px)) rotate(calc((var(--r) * 0.35) + var(--mr))) scale(calc(var(--s) + 0.03));
       }
 
       .edge-flower {

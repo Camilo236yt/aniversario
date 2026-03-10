@@ -21,6 +21,12 @@ let previousLimitBucket = 1;
 let layoutSeed = Math.floor(Math.random() * 2147483647);
 let syncTimer = null;
 let reflowTimer = null;
+let motionTargetX = 0;
+let motionTargetY = 0;
+let motionAnimId = null;
+let motionBound = false;
+let motionButton = null;
+const photoMotion = new WeakMap();
 
 function mediaKindFromName(name) {
   return VIDEO_EXT_RE.test(name) ? "video" : "image";
@@ -74,6 +80,7 @@ function activateMonth(month) {
     closeLightbox();
   } else {
     layoutPhotos();
+    applyMotion();
   }
 }
 
@@ -255,6 +262,10 @@ function renderPhotos() {
     card.dataset.src = item.src;
     card.dataset.kind = item.kind || "image";
     card.style.setProperty("--i", String(index));
+    card.style.setProperty("--depth", (0.75 + (index % 4) * 0.12).toFixed(2));
+    card.style.setProperty("--mx", "0px");
+    card.style.setProperty("--my", "0px");
+    card.style.setProperty("--mr", "0deg");
 
     if ((item.kind || "image") === "video") {
       const video = document.createElement("video");
@@ -279,10 +290,124 @@ function renderPhotos() {
     caption.textContent = item.caption || `Momento ${index + 1}`;
 
     card.appendChild(caption);
+    photoMotion.set(card, {
+      x: 0,
+      y: 0,
+      vx: 0,
+      vy: 0,
+      r: 0,
+      vr: 0,
+      phase: Math.random() * Math.PI * 2,
+      spring: 0.05 + Math.random() * 0.03,
+      damping: 0.81 + Math.random() * 0.08
+    });
     fragment.appendChild(card);
   });
 
   orbit.appendChild(fragment);
+}
+
+function applyMotion(now = performance.now()) {
+  const cards = orbit.querySelectorAll(".photo");
+  const t = now * 0.001;
+  cards.forEach((card) => {
+    let state = photoMotion.get(card);
+    if (!state) {
+      state = {
+        x: 0,
+        y: 0,
+        vx: 0,
+        vy: 0,
+        r: 0,
+        vr: 0,
+        phase: Math.random() * Math.PI * 2,
+        spring: 0.06,
+        damping: 0.86
+      };
+      photoMotion.set(card, state);
+    }
+
+    const depth = Number(card.style.getPropertyValue("--depth")) || 1;
+    const idleX = Math.sin(t * 1.9 + state.phase) * (0.9 + depth * 0.7);
+    const idleY = Math.cos(t * 1.4 + state.phase * 0.8) * (0.5 + depth * 0.55);
+    const targetX = (motionTargetX * depth) + idleX;
+    const targetY = (motionTargetY * depth) + idleY;
+
+    state.vx += (targetX - state.x) * state.spring;
+    state.vy += (targetY - state.y) * state.spring;
+    state.vx *= state.damping;
+    state.vy *= state.damping;
+    state.x += state.vx;
+    state.y += state.vy;
+
+    const rotTarget = (state.x * 0.85) + (state.vx * 0.35);
+    state.vr += (rotTarget - state.r) * 0.11;
+    state.vr *= 0.82;
+    state.r += state.vr;
+
+    const speed = Math.hypot(state.vx, state.vy);
+    card.style.setProperty("--mx", `${state.x.toFixed(2)}px`);
+    card.style.setProperty("--my", `${state.y.toFixed(2)}px`);
+    card.style.setProperty("--mr", `${state.r.toFixed(2)}deg`);
+    card.style.setProperty("--swing-speed", speed.toFixed(4));
+  });
+}
+
+function updateMotion(normalizedX, normalizedY) {
+  motionTargetX = clamp(normalizedX, -1, 1) * 14;
+  motionTargetY = clamp(normalizedY, -1, 1) * 10;
+}
+
+function startMotionPhysics() {
+  if (motionAnimId != null) {
+    return;
+  }
+
+  const step = (now) => {
+    applyMotion(now);
+    motionAnimId = requestAnimationFrame(step);
+  };
+
+  motionAnimId = requestAnimationFrame(step);
+}
+
+function bindDeviceMotion() {
+  if (motionBound) {
+    return;
+  }
+  motionBound = true;
+  window.addEventListener("deviceorientation", (event) => {
+    if (event.gamma == null || event.beta == null) {
+      return;
+    }
+    const nx = event.gamma / 28;
+    const ny = event.beta / 42;
+    updateMotion(nx, ny);
+  }, { passive: true });
+}
+
+function ensureMotionPermissionButton() {
+  if (typeof DeviceOrientationEvent === "undefined" || typeof DeviceOrientationEvent.requestPermission !== "function") {
+    bindDeviceMotion();
+    return;
+  }
+
+  motionButton = document.createElement("button");
+  motionButton.type = "button";
+  motionButton.className = "motion-toggle";
+  motionButton.textContent = "Activar movimiento";
+  motionButton.addEventListener("click", async () => {
+    try {
+      const state = await DeviceOrientationEvent.requestPermission();
+      if (state === "granted") {
+        bindDeviceMotion();
+        motionButton?.remove();
+      }
+    } catch (_error) {
+      // Ignore permission errors, keep static layout.
+    }
+  });
+  document.body.appendChild(motionButton);
 }
 
 function layoutPhotos() {
@@ -417,6 +542,7 @@ async function refreshCollection({ forceShuffle = false } = {}) {
 
   renderPhotos();
   layoutPhotos();
+  applyMotion();
   triggerReflowAnimation();
 }
 
@@ -434,7 +560,15 @@ refreshCollection({ forceShuffle: true });
 startSyncLoop();
 
 window.addEventListener("load", () => refreshCollection());
-window.addEventListener("resize", () => layoutPhotos());
+window.addEventListener("resize", () => {
+  layoutPhotos();
+  applyMotion();
+});
+window.addEventListener("mousemove", (event) => {
+  const nx = ((event.clientX / window.innerWidth) - 0.5) * 2;
+  const ny = ((event.clientY / window.innerHeight) - 0.5) * 2;
+  updateMotion(nx, ny);
+});
 
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) {
@@ -473,4 +607,7 @@ document.addEventListener("keydown", (event) => {
     closeLightbox();
   }
 });
+
+ensureMotionPermissionButton();
+startMotionPhysics();
 
