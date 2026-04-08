@@ -1,20 +1,28 @@
 const CENTER_IMAGE_NAME = "anillo.png";
-const IMAGE_EXT_RE = /\.(png|jpe?g|webp|gif|bmp|avif)$/i;
+const DEFAULT_COLLECTION_SOURCE = "photos.json";
+const DEFAULT_COLLECTION_DIRECTORY = "./";
 const VIDEO_EXT_RE = /\.(mp4|webm|ogg|mov|m4v)$/i;
 const MEDIA_EXT_RE = /\.(png|jpe?g|webp|gif|bmp|avif|mp4|webm|ogg|mov|m4v)$/i;
 const SYNC_INTERVAL_MS = 5000;
 const LIMIT_STEP = 8;
 
-const orbit = document.getElementById("orbit");
-const ringButton = orbit.querySelector(".ring-center");
-const ringImage = ringButton.querySelector("img");
 const lightbox = document.getElementById("lightbox");
 const lightboxImage = document.getElementById("lightboxImage");
 const lightboxVideo = document.getElementById("lightboxVideo");
 const closeButton = document.getElementById("close");
 const monthTabs = Array.from(document.querySelectorAll(".book-tab"));
 const monthPages = Array.from(document.querySelectorAll("[data-month-page]"));
+const defaultMonth = monthTabs.find((tab) => tab.classList.contains("active"))?.dataset.month
+  || monthTabs[0]?.dataset.month
+  || "1";
 
+let activeMonth = defaultMonth;
+let activeAlbum = null;
+let activeOrbit = null;
+let activeRingButton = null;
+let activeRingImage = null;
+let activeCollectionSource = DEFAULT_COLLECTION_SOURCE;
+let activeCollectionDirectory = DEFAULT_COLLECTION_DIRECTORY;
 let activePhotos = [];
 let previousSignature = "";
 let previousLimitBucket = 1;
@@ -30,9 +38,42 @@ const photoMotion = new WeakMap();
 let currentLightboxIndex = -1;
 let touchStartX = 0;
 let touchStartY = 0;
+let refreshGeneration = 0;
 
 function mediaKindFromName(name) {
   return VIDEO_EXT_RE.test(name) ? "video" : "image";
+}
+
+function normalizeDirectoryPath(directory) {
+  if (!directory || directory === ".") {
+    return "./";
+  }
+  return directory.endsWith("/") ? directory : `${directory}/`;
+}
+
+function setActiveAlbumContext(month = activeMonth) {
+  activeMonth = month;
+  refreshGeneration += 1;
+
+  const page = monthPages.find((entry) => entry.dataset.monthPage === month) || null;
+  const album = page?.querySelector("[data-album]") || null;
+
+  activeAlbum = album;
+  activeOrbit = album?.querySelector("[data-orbit]") || null;
+  activeRingButton = activeOrbit?.querySelector(".ring-center") || null;
+  activeRingImage = activeRingButton?.querySelector("img") || null;
+  activeCollectionSource = album?.dataset.source || DEFAULT_COLLECTION_SOURCE;
+  activeCollectionDirectory = normalizeDirectoryPath(album?.dataset.directory || DEFAULT_COLLECTION_DIRECTORY);
+
+  if (!activeAlbum) {
+    activePhotos = [];
+    previousSignature = "";
+    previousLimitBucket = 1;
+  }
+}
+
+function hasActiveAlbum() {
+  return Boolean(activeAlbum && activeOrbit && activeRingButton && activeRingImage);
 }
 
 function openLightbox(src, altText, kind = "image") {
@@ -82,6 +123,8 @@ function openLightboxByIndex(index) {
 }
 
 function activateMonth(month) {
+  setActiveAlbumContext(month);
+
   monthTabs.forEach((tab) => {
     tab.classList.toggle("active", tab.dataset.month === month);
   });
@@ -92,11 +135,10 @@ function activateMonth(month) {
     page.setAttribute("aria-hidden", active ? "false" : "true");
   });
 
-  if (month !== "1") {
-    closeLightbox();
-  } else {
-    layoutPhotos();
-    applyMotion();
+  closeLightbox();
+
+  if (hasActiveAlbum()) {
+    refreshCollection({ forceShuffle: true }).catch(() => {});
   }
 }
 
@@ -177,7 +219,7 @@ function normalizeCollection(data) {
     }
   });
 
-  const unique = Array.from(uniqueMap.values()).sort((a, b) => a.name.localeCompare(b.name, "es", { numeric: true }));
+  const unique = Array.from(uniqueMap.values());
 
   return {
     centerName,
@@ -187,8 +229,8 @@ function normalizeCollection(data) {
   };
 }
 
-async function readFromJson() {
-  const response = await fetch("photos.json", { cache: "no-store" });
+async function readFromJson(source = DEFAULT_COLLECTION_SOURCE) {
+  const response = await fetch(source, { cache: "no-store" });
   if (!response.ok) {
     throw new Error("photos-json-unavailable");
   }
@@ -201,8 +243,9 @@ async function readFromJson() {
   return normalized;
 }
 
-async function readFromDirectoryListing() {
-  const response = await fetch("./", { cache: "no-store" });
+async function readFromDirectoryListing(directory = DEFAULT_COLLECTION_DIRECTORY) {
+  const baseDirectory = normalizeDirectoryPath(directory);
+  const response = await fetch(baseDirectory, { cache: "no-store" });
   if (!response.ok) {
     throw new Error("listing-unavailable");
   }
@@ -210,57 +253,68 @@ async function readFromDirectoryListing() {
   const html = await response.text();
   const doc = new DOMParser().parseFromString(html, "text/html");
   const files = [];
+  const baseUrl = new URL(baseDirectory, window.location.href);
 
   doc.querySelectorAll("a[href]").forEach((anchor) => {
     const rawHref = anchor.getAttribute("href");
-    if (!rawHref || rawHref.startsWith("#") || rawHref.startsWith("?")) {
+    if (!rawHref || rawHref.startsWith("#") || rawHref.startsWith("?") || rawHref.startsWith("../")) {
       return;
     }
 
     let fileName = "";
     try {
-      const url = new URL(rawHref, window.location.href);
+      const url = new URL(rawHref, baseUrl);
       fileName = decodeURIComponent(url.pathname.split("/").pop() || "");
     } catch (_error) {
       fileName = decodeURIComponent(rawHref.split("/").pop() || "");
     }
 
     if (fileName && MEDIA_EXT_RE.test(fileName)) {
-      files.push(fileName);
+      files.push({
+        name: fileName,
+        src: `${baseDirectory}${fileName}`,
+        key: `${baseDirectory}${fileName}`.toLowerCase(),
+        kind: mediaKindFromName(fileName)
+      });
     }
   });
 
-  const unique = Array.from(new Set(files));
+  const uniqueMap = new Map();
+  files.forEach((item) => {
+    if (!uniqueMap.has(item.key)) {
+      uniqueMap.set(item.key, item);
+    }
+  });
+
+  const unique = Array.from(uniqueMap.values());
   if (!unique.length) {
     throw new Error("listing-empty");
   }
 
-  const centerName = unique.find((name) => name.toLowerCase() === CENTER_IMAGE_NAME) || CENTER_IMAGE_NAME;
   const photos = unique
-    .filter((name) => name.toLowerCase() !== centerName.toLowerCase())
-    .sort((a, b) => a.localeCompare(b, "es", { numeric: true }))
-    .map((name, index) => ({
-      name,
-      src: name,
-      key: name.toLowerCase(),
-      kind: mediaKindFromName(name),
+    .sort((a, b) => a.name.localeCompare(b.name, "es", { numeric: true }))
+    .map((item, index) => ({
+      name: item.name,
+      src: item.src,
+      key: item.key,
+      kind: item.kind,
       caption: `Momento ${index + 1}`
     }));
 
   return {
-    centerName,
-    centerKey: centerName.toLowerCase(),
-    centerSrc: centerName,
+    centerName: CENTER_IMAGE_NAME,
+    centerKey: CENTER_IMAGE_NAME.toLowerCase(),
+    centerSrc: CENTER_IMAGE_NAME,
     photos
   };
 }
 
-async function getCollection() {
+async function getCollection({ source = DEFAULT_COLLECTION_SOURCE, directory = DEFAULT_COLLECTION_DIRECTORY } = {}) {
   try {
-    return await readFromJson();
+    return await readFromJson(source);
   } catch (_jsonError) {
     try {
-      return await readFromDirectoryListing();
+      return await readFromDirectoryListing(directory);
     } catch (_listingError) {
       return fallbackCollection();
     }
@@ -268,7 +322,11 @@ async function getCollection() {
 }
 
 function renderPhotos() {
-  orbit.querySelectorAll(".photo").forEach((node) => node.remove());
+  if (!activeOrbit) {
+    return;
+  }
+
+  activeOrbit.querySelectorAll(".photo").forEach((node) => node.remove());
 
   const fragment = document.createDocumentFragment();
   activePhotos.forEach((item, index) => {
@@ -321,11 +379,15 @@ function renderPhotos() {
     fragment.appendChild(card);
   });
 
-  orbit.appendChild(fragment);
+  activeOrbit.appendChild(fragment);
 }
 
 function applyMotion(now = performance.now()) {
-  const cards = orbit.querySelectorAll(".photo");
+  if (!activeOrbit) {
+    return;
+  }
+
+  const cards = activeOrbit.querySelectorAll(".photo");
   const t = now * 0.001;
   cards.forEach((card) => {
     let state = photoMotion.get(card);
@@ -434,13 +496,17 @@ function ensureMotionPermissionButton() {
 }
 
 function layoutPhotos() {
-  const cards = Array.from(orbit.querySelectorAll(".photo"));
-  const ring = orbit.querySelector(".ring-center");
+  if (!activeOrbit) {
+    return;
+  }
+
+  const cards = Array.from(activeOrbit.querySelectorAll(".photo"));
+  const ring = activeOrbit.querySelector(".ring-center");
   if (!cards.length || !ring) {
     return;
   }
 
-  const orbitRect = orbit.getBoundingClientRect();
+  const orbitRect = activeOrbit.getBoundingClientRect();
   const sampleRect = cards[0].getBoundingClientRect();
   const compact = orbitRect.width < 980;
   const cardW = sampleRect.width;
@@ -513,20 +579,47 @@ function layoutPhotos() {
 }
 
 function triggerReflowAnimation() {
-  orbit.classList.remove("reflow");
+  if (!activeOrbit) {
+    return;
+  }
+
+  const orbitNode = activeOrbit;
+  orbitNode.classList.remove("reflow");
   if (reflowTimer) {
     clearTimeout(reflowTimer);
   }
   requestAnimationFrame(() => {
-    orbit.classList.add("reflow");
+    if (orbitNode !== activeOrbit) {
+      return;
+    }
+    orbitNode.classList.add("reflow");
     reflowTimer = setTimeout(() => {
-      orbit.classList.remove("reflow");
+      orbitNode.classList.remove("reflow");
     }, 1000);
   });
 }
 
 async function refreshCollection({ forceShuffle = false } = {}) {
-  const collection = await getCollection();
+  if (!hasActiveAlbum()) {
+    return;
+  }
+
+  const requestGeneration = refreshGeneration;
+  const currentRingButton = activeRingButton;
+  const currentRingImage = activeRingImage;
+  const collection = await getCollection({
+    source: activeCollectionSource,
+    directory: activeCollectionDirectory
+  });
+
+  if (
+    requestGeneration !== refreshGeneration
+    || currentRingButton !== activeRingButton
+    || currentRingImage !== activeRingImage
+  ) {
+    return;
+  }
+
   const signature = collectionSignature(collection);
   const changed = signature !== previousSignature;
 
@@ -537,9 +630,9 @@ async function refreshCollection({ forceShuffle = false } = {}) {
 
   closeLightbox();
   activePhotos = collection.photos;
-  ringButton.dataset.src = collection.centerSrc;
-  ringButton.dataset.kind = "image";
-  ringImage.src = collection.centerSrc;
+  currentRingButton.dataset.src = collection.centerSrc;
+  currentRingButton.dataset.kind = "image";
+  currentRingImage.src = collection.centerSrc;
   previousSignature = signature;
 
   const nextLimitBucket = Math.max(1, Math.ceil(activePhotos.length / LIMIT_STEP));
@@ -562,14 +655,17 @@ function startSyncLoop() {
   }
 
   syncTimer = setInterval(() => {
-    refreshCollection();
+    refreshCollection().catch(() => {});
   }, SYNC_INTERVAL_MS);
 }
 
-refreshCollection({ forceShuffle: true });
+setActiveAlbumContext(activeMonth);
+refreshCollection({ forceShuffle: true }).catch(() => {});
 startSyncLoop();
 
-window.addEventListener("load", () => refreshCollection());
+window.addEventListener("load", () => {
+  refreshCollection().catch(() => {});
+});
 window.addEventListener("resize", () => {
   layoutPhotos();
   applyMotion();
@@ -582,7 +678,7 @@ window.addEventListener("mousemove", (event) => {
 
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) {
-    refreshCollection();
+    refreshCollection().catch(() => {});
   }
 });
 
@@ -592,9 +688,13 @@ monthTabs.forEach((tab) => {
   });
 });
 
-orbit.addEventListener("click", (event) => {
-  const target = event.target.closest("[data-src]");
+document.addEventListener("click", (event) => {
+  const target = event.target.closest(".orbit [data-src]");
   if (!target) {
+    return;
+  }
+
+  if (!activeOrbit || target.closest("[data-orbit]") !== activeOrbit) {
     return;
   }
 

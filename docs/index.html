@@ -1488,11 +1488,12 @@
       <nav class="book-nav" aria-label="Navegacion por meses">
         <button class="book-tab active" type="button" data-month="1">Mes 1</button>
         <button class="book-tab" type="button" data-month="2">Mes 2</button>
+        <button class="book-tab" type="button" data-month="3">Mes 3</button>
       </nav>
 
       <div class="month-page active" id="month-1" data-month-page="1">
-        <section class="album" aria-label="Album romantico mes 1">
-          <div class="orbit" id="orbit">
+        <section class="album" aria-label="Album romantico mes 1" data-album data-source="photos.json" data-directory="x-meses/mes-01/">
+          <div class="orbit" data-orbit>
             <button class="ring-center" type="button" data-src="anillo.png" data-kind="image" aria-label="Abrir anillo">
               <img src="anillo.png" alt="Anillo" loading="eager" />
             </button>
@@ -1502,9 +1503,20 @@
       </div>
 
       <div class="month-page" id="month-2" data-month-page="2" aria-hidden="true">
-        <section class="upcoming" aria-label="Mes 2 proximamente">
+        <section class="album" aria-label="Album romantico mes 2" data-album data-source="photos-2.json" data-directory="x-meses/mes-02/">
+          <div class="orbit" data-orbit>
+            <button class="ring-center" type="button" data-src="anillo.png" data-kind="image" aria-label="Abrir anillo">
+              <img src="anillo.png" alt="Anillo" loading="lazy" />
+            </button>
+          </div>
+          <p class="signature">Dos meses de nosotros</p>
+        </section>
+      </div>
+
+      <div class="month-page" id="month-3" data-month-page="3" aria-hidden="true">
+        <section class="upcoming" aria-label="Mes 3 proximamente">
           <div>
-            <h2>Mes 2</h2>
+            <h2>Mes 3</h2>
             <p>Proximamente...</p>
           </div>
         </section>
