@@ -50,22 +50,16 @@ let currentLightboxIndex = -1;
 let touchStartX = 0;
 let touchStartY = 0;
 let refreshGeneration = 0;
-<<<<<<< HEAD
 let activeRefreshController = null;
-=======
->>>>>>> 68d3f865367152e7b03b81aa0012d0ad0ce7e114
 
 function mediaKindFromName(name) {
   return VIDEO_EXT_RE.test(name) ? "video" : "image";
 }
 
-<<<<<<< HEAD
 function isAbortError(error) {
   return Boolean(error && typeof error === "object" && error.name === "AbortError");
 }
 
-=======
->>>>>>> 68d3f865367152e7b03b81aa0012d0ad0ce7e114
 function normalizeDirectoryPath(directory) {
   if (!directory || directory === ".") {
     return "./";
@@ -89,10 +83,7 @@ function setActiveAlbumContext(month = activeMonth) {
 
   if (!activeAlbum) {
     activePhotos = [];
-<<<<<<< HEAD
     activeCards = [];
-=======
->>>>>>> 68d3f865367152e7b03b81aa0012d0ad0ce7e114
     previousSignature = "";
     previousLimitBucket = 1;
   }
@@ -102,7 +93,6 @@ function hasActiveAlbum() {
   return Boolean(activeAlbum && activeOrbit && activeRingButton && activeRingImage);
 }
 
-<<<<<<< HEAD
 function shouldAnimateMotion() {
   return hasActiveAlbum() && !document.hidden && !motionMediaQuery.matches;
 }
@@ -222,8 +212,6 @@ function syncVideoPreviewPlayback() {
   });
 }
 
-=======
->>>>>>> 68d3f865367152e7b03b81aa0012d0ad0ce7e114
 function openLightbox(src, altText, kind = "image") {
   currentLightboxIndex = activePhotos.findIndex((item) => item.src === src);
 
@@ -271,11 +259,8 @@ function openLightboxByIndex(index) {
 }
 
 function activateMonth(month) {
-<<<<<<< HEAD
   const previousOrbit = activeOrbit;
   stopVideoPreviewPlayback(previousOrbit);
-=======
->>>>>>> 68d3f865367152e7b03b81aa0012d0ad0ce7e114
   setActiveAlbumContext(month);
 
   monthTabs.forEach((tab) => {
@@ -290,24 +275,12 @@ function activateMonth(month) {
 
   closeLightbox();
 
-<<<<<<< HEAD
-  monthPages.forEach((page) => {
-    const active = page.dataset.monthPage === month;
-    page.classList.toggle("active", active);
-    page.setAttribute("aria-hidden", active ? "false" : "true");
-  });
-
-  closeLightbox();
-
-=======
->>>>>>> 68d3f865367152e7b03b81aa0012d0ad0ce7e114
   if (hasActiveAlbum()) {
     refreshCollection({ forceShuffle: true }).catch(() => {});
   }
 
   syncRuntimeState();
 }
-<<<<<<< HEAD
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
@@ -419,113 +392,6 @@ async function readFromDirectoryListing(directory = DEFAULT_COLLECTION_DIRECTORY
     cache: "no-store",
     signal: activeRefreshController?.signal
   });
-=======
-
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function createRng(seed) {
-  let t = seed >>> 0;
-  return function next() {
-    t += 0x6D2B79F5;
-    let x = Math.imul(t ^ (t >>> 15), 1 | t);
-    x ^= x + Math.imul(x ^ (x >>> 7), 61 | x);
-    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function collectionSignature(collection) {
-  const items = collection.photos.map((item) => item.key || item.name.toLowerCase()).join("|");
-  return `${collection.centerKey || collection.centerName.toLowerCase()}|${items}`;
-}
-
-function fallbackCollection() {
-  return {
-    centerName: CENTER_IMAGE_NAME,
-    centerKey: CENTER_IMAGE_NAME,
-    centerSrc: CENTER_IMAGE_NAME,
-    photos: []
-  };
-}
-
-function normalizeCollection(data) {
-  const centerRaw = typeof data?.center === "string" ? data.center.trim() : CENTER_IMAGE_NAME;
-  const centerName = centerRaw || CENTER_IMAGE_NAME;
-  const photosRaw = Array.isArray(data?.photos) ? data.photos : [];
-
-  const cleanPhotos = photosRaw
-    .map((entry, index) => {
-      if (typeof entry === "string") {
-        const name = entry.trim();
-        if (!name) {
-          return null;
-        }
-        return {
-          name,
-          src: name,
-          key: name.toLowerCase(),
-          kind: mediaKindFromName(name),
-          caption: `Momento ${index + 1}`
-        };
-      }
-
-      if (entry && typeof entry === "object" && typeof entry.src === "string") {
-        const src = entry.src.trim();
-        if (!src) {
-          return null;
-        }
-        const baseName = src.split("/").pop() || src;
-        return {
-          name: baseName,
-          src,
-          key: src.toLowerCase(),
-          kind: mediaKindFromName(src),
-          caption: typeof entry.caption === "string" && entry.caption.trim()
-            ? entry.caption.trim()
-            : `Momento ${index + 1}`
-        };
-      }
-
-      return null;
-    })
-    .filter((item) => item && MEDIA_EXT_RE.test(item.src) && item.src.toLowerCase() !== centerName.toLowerCase());
-
-  const uniqueMap = new Map();
-  cleanPhotos.forEach((item) => {
-    if (!uniqueMap.has(item.key)) {
-      uniqueMap.set(item.key, item);
-    }
-  });
-
-  const unique = Array.from(uniqueMap.values());
-
-  return {
-    centerName,
-    centerKey: centerName.toLowerCase(),
-    centerSrc: centerName,
-    photos: unique
-  };
-}
-
-async function readFromJson(source = DEFAULT_COLLECTION_SOURCE) {
-  const response = await fetch(source, { cache: "no-store" });
-  if (!response.ok) {
-    throw new Error("photos-json-unavailable");
-  }
-
-  const data = await response.json();
-  const normalized = normalizeCollection(data);
-  if (!normalized.photos.length) {
-    throw new Error("photos-json-empty");
-  }
-  return normalized;
-}
-
-async function readFromDirectoryListing(directory = DEFAULT_COLLECTION_DIRECTORY) {
-  const baseDirectory = normalizeDirectoryPath(directory);
-  const response = await fetch(baseDirectory, { cache: "no-store" });
->>>>>>> 68d3f865367152e7b03b81aa0012d0ad0ce7e114
   if (!response.ok) {
     throw new Error("listing-unavailable");
   }
@@ -592,7 +458,6 @@ async function readFromDirectoryListing(directory = DEFAULT_COLLECTION_DIRECTORY
 async function getCollection({ source = DEFAULT_COLLECTION_SOURCE, directory = DEFAULT_COLLECTION_DIRECTORY } = {}) {
   try {
     return await readFromJson(source);
-<<<<<<< HEAD
   } catch (jsonError) {
     if (isAbortError(jsonError)) {
       throw jsonError;
@@ -603,12 +468,6 @@ async function getCollection({ source = DEFAULT_COLLECTION_SOURCE, directory = D
       if (isAbortError(listingError)) {
         throw listingError;
       }
-=======
-  } catch (_jsonError) {
-    try {
-      return await readFromDirectoryListing(directory);
-    } catch (_listingError) {
->>>>>>> 68d3f865367152e7b03b81aa0012d0ad0ce7e114
       return fallbackCollection();
     }
   }
@@ -619,11 +478,7 @@ function renderPhotos() {
     return;
   }
 
-<<<<<<< HEAD
   activeCards.forEach((node) => node.remove());
-=======
-  activeOrbit.querySelectorAll(".photo").forEach((node) => node.remove());
->>>>>>> 68d3f865367152e7b03b81aa0012d0ad0ce7e114
 
   const fragment = document.createDocumentFragment();
   const nextCards = [];
@@ -640,7 +495,6 @@ function renderPhotos() {
     card.style.setProperty("--my", "0px");
     card.style.setProperty("--mr", "0deg");
 
-<<<<<<< HEAD
     if ((item.kind || "image") === "video") {
       const video = document.createElement("video");
       video.src = item.src;
@@ -661,26 +515,6 @@ function renderPhotos() {
       card.appendChild(img);
     }
 
-=======
-    if ((item.kind || "image") === "video") {
-      const video = document.createElement("video");
-      video.src = item.src;
-      video.muted = true;
-      video.loop = true;
-      video.autoplay = true;
-      video.playsInline = true;
-      video.preload = "metadata";
-      video.setAttribute("aria-label", item.caption || `Video ${index + 1}`);
-      card.appendChild(video);
-    } else {
-      const img = document.createElement("img");
-      img.src = item.src;
-      img.alt = item.caption || `Recuerdo ${index + 1}`;
-      img.loading = "lazy";
-      card.appendChild(img);
-    }
-
->>>>>>> 68d3f865367152e7b03b81aa0012d0ad0ce7e114
     const caption = document.createElement("p");
     caption.className = "caption";
     caption.textContent = item.caption || `Momento ${index + 1}`;
@@ -700,28 +534,16 @@ function renderPhotos() {
     fragment.appendChild(card);
     nextCards.push(card);
   });
-<<<<<<< HEAD
 
   activeCards = nextCards;
-=======
-
->>>>>>> 68d3f865367152e7b03b81aa0012d0ad0ce7e114
   activeOrbit.appendChild(fragment);
 }
 
 function applyMotion(now = performance.now()) {
-<<<<<<< HEAD
   if (!activeOrbit || !activeCards.length) {
     return;
   }
 
-=======
-  if (!activeOrbit) {
-    return;
-  }
-
-  const cards = activeOrbit.querySelectorAll(".photo");
->>>>>>> 68d3f865367152e7b03b81aa0012d0ad0ce7e114
   const t = now * 0.001;
   activeCards.forEach((card) => {
     let state = photoMotion.get(card);
@@ -837,7 +659,6 @@ function ensureMotionPermissionButton() {
 }
 
 function layoutPhotos() {
-<<<<<<< HEAD
   if (!activeOrbit || !activeCards.length) {
     return;
   }
@@ -849,20 +670,6 @@ function layoutPhotos() {
 
   const orbitRect = activeOrbit.getBoundingClientRect();
   const sampleRect = activeCards[0].getBoundingClientRect();
-=======
-  if (!activeOrbit) {
-    return;
-  }
-
-  const cards = Array.from(activeOrbit.querySelectorAll(".photo"));
-  const ring = activeOrbit.querySelector(".ring-center");
-  if (!cards.length || !ring) {
-    return;
-  }
-
-  const orbitRect = activeOrbit.getBoundingClientRect();
-  const sampleRect = cards[0].getBoundingClientRect();
->>>>>>> 68d3f865367152e7b03b81aa0012d0ad0ce7e114
   const compact = orbitRect.width < 980;
   const cardW = sampleRect.width;
   const cardH = sampleRect.height;
@@ -882,7 +689,6 @@ function layoutPhotos() {
   const desiredRings = compact
     ? (activePhotos.length > 20 ? 3 : activePhotos.length > 6 ? 2 : 1)
     : (activePhotos.length > 30 ? 4 : activePhotos.length > 14 ? 3 : activePhotos.length > 7 ? 2 : 1);
-<<<<<<< HEAD
   const fitByX = Math.max(1, Math.floor(ringSpanX / (cardW * (compact ? 0.82 : 0.7))) + 1);
   const fitByY = Math.max(1, Math.floor(ringSpanY / (cardH * (compact ? 0.8 : 0.65))) + 1);
   const ringCount = Math.min(desiredRings, Math.min(fitByX, fitByY));
@@ -902,27 +708,6 @@ function layoutPhotos() {
     groups[index % ringCount].push(card);
   });
 
-=======
-  const fitByX = Math.max(1, Math.floor(ringSpanX / (cardW * (compact ? 0.82 : 0.7))) + 1);
-  const fitByY = Math.max(1, Math.floor(ringSpanY / (cardH * (compact ? 0.8 : 0.65))) + 1);
-  const ringCount = Math.min(desiredRings, Math.min(fitByX, fitByY));
-
-  const groups = Array.from({ length: ringCount }, () => []);
-  const rng = createRng(layoutSeed + activePhotos.length * 97);
-  const shuffled = cards.slice();
-
-  if (activePhotos.length > 12) {
-    for (let i = shuffled.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(rng() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-  }
-
-  shuffled.forEach((card, index) => {
-    groups[index % ringCount].push(card);
-  });
-
->>>>>>> 68d3f865367152e7b03b81aa0012d0ad0ce7e114
   const gentleLayout = activePhotos.length <= 16;
 
   groups.forEach((group, ringIndex) => {
@@ -981,25 +766,8 @@ async function refreshCollection({ forceShuffle = false } = {}) {
     return;
   }
 
-<<<<<<< HEAD
   if (activeRefreshController) {
     activeRefreshController.abort();
-=======
-  const requestGeneration = refreshGeneration;
-  const currentRingButton = activeRingButton;
-  const currentRingImage = activeRingImage;
-  const collection = await getCollection({
-    source: activeCollectionSource,
-    directory: activeCollectionDirectory
-  });
-
-  if (
-    requestGeneration !== refreshGeneration
-    || currentRingButton !== activeRingButton
-    || currentRingImage !== activeRingImage
-  ) {
-    return;
->>>>>>> 68d3f865367152e7b03b81aa0012d0ad0ce7e114
   }
   const controller = new AbortController();
   activeRefreshController = controller;
@@ -1044,29 +812,6 @@ async function refreshCollection({ forceShuffle = false } = {}) {
       layoutSeed = Math.floor(Math.random() * 2147483647);
     }
 
-  const signature = collectionSignature(collection);
-  const changed = signature !== previousSignature;
-
-  if (!changed && !forceShuffle) {
-    layoutPhotos();
-    return;
-  }
-
-  closeLightbox();
-  activePhotos = collection.photos;
-  currentRingButton.dataset.src = collection.centerSrc;
-  currentRingButton.dataset.kind = "image";
-  currentRingImage.src = collection.centerSrc;
-  previousSignature = signature;
-
-  const nextLimitBucket = Math.max(1, Math.ceil(activePhotos.length / LIMIT_STEP));
-  const crossedLimit = nextLimitBucket !== previousLimitBucket;
-  previousLimitBucket = nextLimitBucket;
-
-  if (changed || crossedLimit || forceShuffle) {
-    layoutSeed = Math.floor(Math.random() * 2147483647);
-  }
-
   renderPhotos();
   layoutPhotos();
   syncVideoPreviewPlayback();
@@ -1086,22 +831,15 @@ async function refreshCollection({ forceShuffle = false } = {}) {
 }
 
 function startSyncLoop() {
-<<<<<<< HEAD
   if (syncTimer || !shouldSyncCollection()) {
     return;
   }
-=======
-  if (syncTimer) {
-    clearInterval(syncTimer);
-  }
->>>>>>> 68d3f865367152e7b03b81aa0012d0ad0ce7e114
 
   syncTimer = setInterval(() => {
     refreshCollection().catch(() => {});
   }, SYNC_INTERVAL_MS);
 }
 
-<<<<<<< HEAD
 function stopSyncLoop() {
   if (syncTimer) {
     clearInterval(syncTimer);
@@ -1188,31 +926,6 @@ if (typeof motionMediaQuery.addEventListener === "function") {
   });
 }
 
-=======
-setActiveAlbumContext(activeMonth);
-refreshCollection({ forceShuffle: true }).catch(() => {});
-startSyncLoop();
-
-window.addEventListener("load", () => {
-  refreshCollection().catch(() => {});
-});
-window.addEventListener("resize", () => {
-  layoutPhotos();
-  applyMotion();
-});
-window.addEventListener("mousemove", (event) => {
-  const nx = ((event.clientX / window.innerWidth) - 0.5) * 2;
-  const ny = ((event.clientY / window.innerHeight) - 0.5) * 2;
-  updateMotion(nx, ny);
-});
-
-document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) {
-    refreshCollection().catch(() => {});
-  }
-});
-
->>>>>>> 68d3f865367152e7b03b81aa0012d0ad0ce7e114
 monthTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     activateMonth(tab.dataset.month || "1");
