@@ -1,37 +1,215 @@
 const CENTER_IMAGE_NAME = "anillo.png";
+const DEFAULT_COLLECTION_SOURCE = "photos.json";
+const DEFAULT_COLLECTION_DIRECTORY = "./";
 const VIDEO_EXT_RE = /\.(mp4|webm|ogg|mov|m4v)$/i;
 const MEDIA_EXT_RE = /\.(png|jpe?g|webp|gif|bmp|avif|mp4|webm|ogg|mov|m4v)$/i;
-const SYNC_INTERVAL_MS = 5000;
+const SYNC_INTERVAL_MS = 30000;
 const LIMIT_STEP = 8;
+const RESIZE_SETTLE_MS = 120;
+const POINTER_REST_DELAY_MS = 140;
+const IS_FILE_PROTOCOL = window.location.protocol === "file:";
+const motionMediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-const orbit = document.getElementById("orbit");
-const ringButton = orbit.querySelector(".ring-center");
-const ringImage = ringButton.querySelector("img");
 const lightbox = document.getElementById("lightbox");
 const lightboxImage = document.getElementById("lightboxImage");
 const lightboxVideo = document.getElementById("lightboxVideo");
 const closeButton = document.getElementById("close");
 const monthTabs = Array.from(document.querySelectorAll(".book-tab"));
 const monthPages = Array.from(document.querySelectorAll("[data-month-page]"));
+const defaultMonth = monthTabs.find((tab) => tab.classList.contains("active"))?.dataset.month
+  || monthTabs[0]?.dataset.month
+  || "1";
 
+let activeMonth = defaultMonth;
+let activeAlbum = null;
+let activeOrbit = null;
+let activeRingButton = null;
+let activeRingImage = null;
+let activeCollectionSource = DEFAULT_COLLECTION_SOURCE;
+let activeCollectionDirectory = DEFAULT_COLLECTION_DIRECTORY;
 let activePhotos = [];
+let activeCards = [];
 let previousSignature = "";
 let previousLimitBucket = 1;
 let layoutSeed = Math.floor(Math.random() * 2147483647);
 let syncTimer = null;
 let reflowTimer = null;
+let resizeTimer = null;
 let motionTargetX = 0;
 let motionTargetY = 0;
 let motionAnimId = null;
 let motionBound = false;
 let motionButton = null;
+let pointerFrameId = null;
+let pointerResetTimer = null;
+let pointerClientX = window.innerWidth / 2;
+let pointerClientY = window.innerHeight / 2;
+let videoCardObserver = null;
 const photoMotion = new WeakMap();
 let currentLightboxIndex = -1;
 let touchStartX = 0;
 let touchStartY = 0;
+let refreshGeneration = 0;
+let activeRefreshController = null;
 
 function mediaKindFromName(name) {
   return VIDEO_EXT_RE.test(name) ? "video" : "image";
+}
+
+function isAbortError(error) {
+  return Boolean(error && typeof error === "object" && error.name === "AbortError");
+}
+
+function normalizeDirectoryPath(directory) {
+  if (!directory || directory === ".") {
+    return "./";
+  }
+  return directory.endsWith("/") ? directory : `${directory}/`;
+}
+
+function setActiveAlbumContext(month = activeMonth) {
+  activeMonth = month;
+  refreshGeneration += 1;
+
+  const page = monthPages.find((entry) => entry.dataset.monthPage === month) || null;
+  const album = page?.querySelector("[data-album]") || null;
+
+  activeAlbum = album;
+  activeOrbit = album?.querySelector("[data-orbit]") || null;
+  activeRingButton = activeOrbit?.querySelector(".ring-center") || null;
+  activeRingImage = activeRingButton?.querySelector("img") || null;
+  activeCollectionSource = album?.dataset.source || DEFAULT_COLLECTION_SOURCE;
+  activeCollectionDirectory = normalizeDirectoryPath(album?.dataset.directory || DEFAULT_COLLECTION_DIRECTORY);
+
+  if (!activeAlbum) {
+    activePhotos = [];
+    activeCards = [];
+    previousSignature = "";
+    previousLimitBucket = 1;
+  }
+}
+
+function hasActiveAlbum() {
+  return Boolean(activeAlbum && activeOrbit && activeRingButton && activeRingImage);
+}
+
+function shouldAnimateMotion() {
+  return hasActiveAlbum() && !document.hidden && !motionMediaQuery.matches;
+}
+
+function shouldSyncCollection() {
+  return hasActiveAlbum() && !document.hidden && !IS_FILE_PROTOCOL;
+}
+
+function shouldAutoplayAlbumVideos() {
+  return hasActiveAlbum() && activeMonth === "2" && !document.hidden;
+}
+
+function resetMotionState() {
+  motionTargetX = 0;
+  motionTargetY = 0;
+  activeCards.forEach((card) => {
+    const state = photoMotion.get(card);
+    if (state) {
+      state.x = 0;
+      state.y = 0;
+      state.vx = 0;
+      state.vy = 0;
+      state.r = 0;
+      state.vr = 0;
+    }
+    card.style.setProperty("--mx", "0px");
+    card.style.setProperty("--my", "0px");
+    card.style.setProperty("--mr", "0deg");
+  });
+}
+
+function stopMotionPhysics({ reset = false } = {}) {
+  if (motionAnimId != null) {
+    cancelAnimationFrame(motionAnimId);
+    motionAnimId = null;
+  }
+  if (pointerFrameId != null) {
+    cancelAnimationFrame(pointerFrameId);
+    pointerFrameId = null;
+  }
+  if (pointerResetTimer) {
+    clearTimeout(pointerResetTimer);
+    pointerResetTimer = null;
+  }
+  if (reset) {
+    resetMotionState();
+  }
+}
+
+function stopVideoPreviewPlayback(scope = activeOrbit) {
+  if (videoCardObserver) {
+    videoCardObserver.disconnect();
+    videoCardObserver = null;
+  }
+
+  if (!scope) {
+    return;
+  }
+
+  scope.querySelectorAll(".photo video").forEach((video) => {
+    video.pause();
+  });
+}
+
+function playVideoPreview(video) {
+  if (!shouldAutoplayAlbumVideos()) {
+    return;
+  }
+
+  const playAttempt = video.play();
+  if (playAttempt && typeof playAttempt.catch === "function") {
+    playAttempt.catch(() => {});
+  }
+}
+
+function syncVideoPreviewPlayback() {
+  stopVideoPreviewPlayback();
+
+  if (!shouldAutoplayAlbumVideos() || !activeOrbit) {
+    return;
+  }
+
+  const videos = Array.from(activeOrbit.querySelectorAll(".photo video"));
+  if (!videos.length) {
+    return;
+  }
+
+  if (!("IntersectionObserver" in window)) {
+    videos.forEach((video) => {
+      playVideoPreview(video);
+    });
+    return;
+  }
+
+  videoCardObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      const video = entry.target;
+      if (
+        entry.isIntersecting
+        && entry.intersectionRatio >= 0.35
+        && shouldAutoplayAlbumVideos()
+        && video.closest("[data-orbit]") === activeOrbit
+      ) {
+        playVideoPreview(video);
+      } else {
+        video.pause();
+      }
+    });
+  }, {
+    root: activeOrbit,
+    rootMargin: "120px 0px 120px 0px",
+    threshold: [0.35, 0.7]
+  });
+
+  videos.forEach((video) => {
+    videoCardObserver.observe(video);
+  });
 }
 
 function openLightbox(src, altText, kind = "image") {
@@ -81,6 +259,10 @@ function openLightboxByIndex(index) {
 }
 
 function activateMonth(month) {
+  const previousOrbit = activeOrbit;
+  stopVideoPreviewPlayback(previousOrbit);
+  setActiveAlbumContext(month);
+
   monthTabs.forEach((tab) => {
     tab.classList.toggle("active", tab.dataset.month === month);
   });
@@ -91,12 +273,13 @@ function activateMonth(month) {
     page.setAttribute("aria-hidden", active ? "false" : "true");
   });
 
-  if (month !== "1") {
-    closeLightbox();
-  } else {
-    layoutPhotos();
-    applyMotion();
+  closeLightbox();
+
+  if (hasActiveAlbum()) {
+    refreshCollection({ forceShuffle: true }).catch(() => {});
   }
+
+  syncRuntimeState();
 }
 
 function clamp(value, min, max) {
@@ -176,7 +359,7 @@ function normalizeCollection(data) {
     }
   });
 
-  const unique = Array.from(uniqueMap.values()).sort((a, b) => a.name.localeCompare(b.name, "es", { numeric: true }));
+  const unique = Array.from(uniqueMap.values());
 
   return {
     centerName,
@@ -186,8 +369,11 @@ function normalizeCollection(data) {
   };
 }
 
-async function readFromJson() {
-  const response = await fetch("photos.json", { cache: "no-store" });
+async function readFromJson(source = DEFAULT_COLLECTION_SOURCE) {
+  const response = await fetch(source, {
+    cache: "no-store",
+    signal: activeRefreshController?.signal
+  });
   if (!response.ok) {
     throw new Error("photos-json-unavailable");
   }
@@ -200,8 +386,12 @@ async function readFromJson() {
   return normalized;
 }
 
-async function readFromDirectoryListing() {
-  const response = await fetch("./", { cache: "no-store" });
+async function readFromDirectoryListing(directory = DEFAULT_COLLECTION_DIRECTORY) {
+  const baseDirectory = normalizeDirectoryPath(directory);
+  const response = await fetch(baseDirectory, {
+    cache: "no-store",
+    signal: activeRefreshController?.signal
+  });
   if (!response.ok) {
     throw new Error("listing-unavailable");
   }
@@ -209,67 +399,89 @@ async function readFromDirectoryListing() {
   const html = await response.text();
   const doc = new DOMParser().parseFromString(html, "text/html");
   const files = [];
+  const baseUrl = new URL(baseDirectory, window.location.href);
 
   doc.querySelectorAll("a[href]").forEach((anchor) => {
     const rawHref = anchor.getAttribute("href");
-    if (!rawHref || rawHref.startsWith("#") || rawHref.startsWith("?")) {
+    if (!rawHref || rawHref.startsWith("#") || rawHref.startsWith("?") || rawHref.startsWith("../")) {
       return;
     }
 
     let fileName = "";
     try {
-      const url = new URL(rawHref, window.location.href);
+      const url = new URL(rawHref, baseUrl);
       fileName = decodeURIComponent(url.pathname.split("/").pop() || "");
     } catch (_error) {
       fileName = decodeURIComponent(rawHref.split("/").pop() || "");
     }
 
     if (fileName && MEDIA_EXT_RE.test(fileName)) {
-      files.push(fileName);
+      files.push({
+        name: fileName,
+        src: `${baseDirectory}${fileName}`,
+        key: `${baseDirectory}${fileName}`.toLowerCase(),
+        kind: mediaKindFromName(fileName)
+      });
     }
   });
 
-  const unique = Array.from(new Set(files));
+  const uniqueMap = new Map();
+  files.forEach((item) => {
+    if (!uniqueMap.has(item.key)) {
+      uniqueMap.set(item.key, item);
+    }
+  });
+
+  const unique = Array.from(uniqueMap.values());
   if (!unique.length) {
     throw new Error("listing-empty");
   }
 
-  const centerName = unique.find((name) => name.toLowerCase() === CENTER_IMAGE_NAME) || CENTER_IMAGE_NAME;
   const photos = unique
-    .filter((name) => name.toLowerCase() !== centerName.toLowerCase())
-    .sort((a, b) => a.localeCompare(b, "es", { numeric: true }))
-    .map((name, index) => ({
-      name,
-      src: name,
-      key: name.toLowerCase(),
-      kind: mediaKindFromName(name),
+    .sort((a, b) => a.name.localeCompare(b.name, "es", { numeric: true }))
+    .map((item, index) => ({
+      name: item.name,
+      src: item.src,
+      key: item.key,
+      kind: item.kind,
       caption: `Momento ${index + 1}`
     }));
 
   return {
-    centerName,
-    centerKey: centerName.toLowerCase(),
-    centerSrc: centerName,
+    centerName: CENTER_IMAGE_NAME,
+    centerKey: CENTER_IMAGE_NAME.toLowerCase(),
+    centerSrc: CENTER_IMAGE_NAME,
     photos
   };
 }
 
-async function getCollection() {
+async function getCollection({ source = DEFAULT_COLLECTION_SOURCE, directory = DEFAULT_COLLECTION_DIRECTORY } = {}) {
   try {
-    return await readFromJson();
-  } catch (_jsonError) {
+    return await readFromJson(source);
+  } catch (jsonError) {
+    if (isAbortError(jsonError)) {
+      throw jsonError;
+    }
     try {
-      return await readFromDirectoryListing();
-    } catch (_listingError) {
+      return await readFromDirectoryListing(directory);
+    } catch (listingError) {
+      if (isAbortError(listingError)) {
+        throw listingError;
+      }
       return fallbackCollection();
     }
   }
 }
 
 function renderPhotos() {
-  orbit.querySelectorAll(".photo").forEach((node) => node.remove());
+  if (!activeOrbit) {
+    return;
+  }
+
+  activeCards.forEach((node) => node.remove());
 
   const fragment = document.createDocumentFragment();
+  const nextCards = [];
   activePhotos.forEach((item, index) => {
     const card = document.createElement("button");
     card.type = "button";
@@ -288,9 +500,10 @@ function renderPhotos() {
       video.src = item.src;
       video.muted = true;
       video.loop = true;
-      video.autoplay = true;
       video.playsInline = true;
       video.preload = "metadata";
+      video.disablePictureInPicture = true;
+      video.setAttribute("aria-hidden", "true");
       video.setAttribute("aria-label", item.caption || `Video ${index + 1}`);
       card.appendChild(video);
     } else {
@@ -298,6 +511,7 @@ function renderPhotos() {
       img.src = item.src;
       img.alt = item.caption || `Recuerdo ${index + 1}`;
       img.loading = "lazy";
+      img.decoding = "async";
       card.appendChild(img);
     }
 
@@ -318,15 +532,20 @@ function renderPhotos() {
       damping: 0.81 + Math.random() * 0.08
     });
     fragment.appendChild(card);
+    nextCards.push(card);
   });
 
-  orbit.appendChild(fragment);
+  activeCards = nextCards;
+  activeOrbit.appendChild(fragment);
 }
 
 function applyMotion(now = performance.now()) {
-  const cards = orbit.querySelectorAll(".photo");
+  if (!activeOrbit || !activeCards.length) {
+    return;
+  }
+
   const t = now * 0.001;
-  cards.forEach((card) => {
+  activeCards.forEach((card) => {
     let state = photoMotion.get(card);
     if (!state) {
       state = {
@@ -375,11 +594,15 @@ function updateMotion(normalizedX, normalizedY) {
 }
 
 function startMotionPhysics() {
-  if (motionAnimId != null) {
+  if (motionAnimId != null || !shouldAnimateMotion()) {
     return;
   }
 
   const step = (now) => {
+    if (!shouldAnimateMotion()) {
+      stopMotionPhysics();
+      return;
+    }
     applyMotion(now);
     motionAnimId = requestAnimationFrame(step);
   };
@@ -393,6 +616,9 @@ function bindDeviceMotion() {
   }
   motionBound = true;
   window.addEventListener("devicemotion", (event) => {
+    if (!shouldAnimateMotion()) {
+      return;
+    }
     const acc = event.accelerationIncludingGravity || event.acceleration;
     if (!acc) {
       return;
@@ -433,14 +659,17 @@ function ensureMotionPermissionButton() {
 }
 
 function layoutPhotos() {
-  const cards = Array.from(orbit.querySelectorAll(".photo"));
-  const ring = orbit.querySelector(".ring-center");
-  if (!cards.length || !ring) {
+  if (!activeOrbit || !activeCards.length) {
     return;
   }
 
-  const orbitRect = orbit.getBoundingClientRect();
-  const sampleRect = cards[0].getBoundingClientRect();
+  const ring = activeOrbit.querySelector(".ring-center");
+  if (!ring) {
+    return;
+  }
+
+  const orbitRect = activeOrbit.getBoundingClientRect();
+  const sampleRect = activeCards[0].getBoundingClientRect();
   const compact = orbitRect.width < 980;
   const cardW = sampleRect.width;
   const cardH = sampleRect.height;
@@ -466,7 +695,7 @@ function layoutPhotos() {
 
   const groups = Array.from({ length: ringCount }, () => []);
   const rng = createRng(layoutSeed + activePhotos.length * 97);
-  const shuffled = cards.slice();
+  const shuffled = activeCards.slice();
 
   if (activePhotos.length > 12) {
     for (let i = shuffled.length - 1; i > 0; i -= 1) {
@@ -512,78 +741,190 @@ function layoutPhotos() {
 }
 
 function triggerReflowAnimation() {
-  orbit.classList.remove("reflow");
+  if (!activeOrbit) {
+    return;
+  }
+
+  const orbitNode = activeOrbit;
+  orbitNode.classList.remove("reflow");
   if (reflowTimer) {
     clearTimeout(reflowTimer);
   }
   requestAnimationFrame(() => {
-    orbit.classList.add("reflow");
+    if (orbitNode !== activeOrbit) {
+      return;
+    }
+    orbitNode.classList.add("reflow");
     reflowTimer = setTimeout(() => {
-      orbit.classList.remove("reflow");
+      orbitNode.classList.remove("reflow");
     }, 1000);
   });
 }
 
 async function refreshCollection({ forceShuffle = false } = {}) {
-  const collection = await getCollection();
-  const signature = collectionSignature(collection);
-  const changed = signature !== previousSignature;
-
-  if (!changed && !forceShuffle) {
-    layoutPhotos();
+  if (!hasActiveAlbum()) {
     return;
   }
 
-  closeLightbox();
-  activePhotos = collection.photos;
-  ringButton.dataset.src = collection.centerSrc;
-  ringButton.dataset.kind = "image";
-  ringImage.src = collection.centerSrc;
-  previousSignature = signature;
-
-  const nextLimitBucket = Math.max(1, Math.ceil(activePhotos.length / LIMIT_STEP));
-  const crossedLimit = nextLimitBucket !== previousLimitBucket;
-  previousLimitBucket = nextLimitBucket;
-
-  if (changed || crossedLimit || forceShuffle) {
-    layoutSeed = Math.floor(Math.random() * 2147483647);
+  if (activeRefreshController) {
+    activeRefreshController.abort();
   }
+  const controller = new AbortController();
+  activeRefreshController = controller;
+
+  const requestGeneration = refreshGeneration;
+  const currentRingButton = activeRingButton;
+  const currentRingImage = activeRingImage;
+  try {
+    const collection = await getCollection({
+      source: activeCollectionSource,
+      directory: activeCollectionDirectory
+    });
+
+    if (
+      requestGeneration !== refreshGeneration
+      || currentRingButton !== activeRingButton
+      || currentRingImage !== activeRingImage
+    ) {
+      return;
+    }
+
+    const signature = collectionSignature(collection);
+    const changed = signature !== previousSignature;
+
+    if (!changed && !forceShuffle) {
+      layoutPhotos();
+      return;
+    }
+
+    closeLightbox();
+    activePhotos = collection.photos;
+    currentRingButton.dataset.src = collection.centerSrc;
+    currentRingButton.dataset.kind = "image";
+    currentRingImage.src = collection.centerSrc;
+    previousSignature = signature;
+
+    const nextLimitBucket = Math.max(1, Math.ceil(activePhotos.length / LIMIT_STEP));
+    const crossedLimit = nextLimitBucket !== previousLimitBucket;
+    previousLimitBucket = nextLimitBucket;
+
+    if (changed || crossedLimit || forceShuffle) {
+      layoutSeed = Math.floor(Math.random() * 2147483647);
+    }
 
   renderPhotos();
   layoutPhotos();
-  applyMotion();
-  triggerReflowAnimation();
+  syncVideoPreviewPlayback();
+  if (shouldAnimateMotion()) {
+    applyMotion();
+  }
+    triggerReflowAnimation();
+  } catch (error) {
+    if (!isAbortError(error)) {
+      throw error;
+    }
+  } finally {
+    if (activeRefreshController === controller) {
+      activeRefreshController = null;
+    }
+  }
 }
 
 function startSyncLoop() {
-  if (syncTimer) {
-    clearInterval(syncTimer);
+  if (syncTimer || !shouldSyncCollection()) {
+    return;
   }
 
   syncTimer = setInterval(() => {
-    refreshCollection();
+    refreshCollection().catch(() => {});
   }, SYNC_INTERVAL_MS);
 }
 
-refreshCollection({ forceShuffle: true });
-startSyncLoop();
+function stopSyncLoop() {
+  if (syncTimer) {
+    clearInterval(syncTimer);
+    syncTimer = null;
+  }
+}
 
-window.addEventListener("load", () => refreshCollection());
-window.addEventListener("resize", () => {
-  layoutPhotos();
-  applyMotion();
-});
-window.addEventListener("mousemove", (event) => {
-  const nx = ((event.clientX / window.innerWidth) - 0.5) * 2;
-  const ny = ((event.clientY / window.innerHeight) - 0.5) * 2;
-  updateMotion(nx, ny);
-});
+function syncRuntimeState() {
+  if (shouldAnimateMotion()) {
+    startMotionPhysics();
+  } else {
+    stopMotionPhysics({ reset: true });
+  }
 
-document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) {
-    refreshCollection();
+  if (shouldAutoplayAlbumVideos()) {
+    syncVideoPreviewPlayback();
+  } else {
+    stopVideoPreviewPlayback();
+  }
+
+  if (shouldSyncCollection()) {
+    startSyncLoop();
+  } else {
+    stopSyncLoop();
+  }
+}
+
+setActiveAlbumContext(activeMonth);
+refreshCollection({ forceShuffle: true }).catch(() => {});
+syncRuntimeState();
+
+window.addEventListener("load", () => {
+  if (!activeCards.length && !activeRefreshController) {
+    refreshCollection({ forceShuffle: true }).catch(() => {});
   }
 });
+window.addEventListener("resize", () => {
+  if (resizeTimer) {
+    clearTimeout(resizeTimer);
+  }
+  resizeTimer = setTimeout(() => {
+    layoutPhotos();
+    if (shouldAnimateMotion()) {
+      applyMotion();
+    }
+  }, RESIZE_SETTLE_MS);
+});
+window.addEventListener("pointermove", (event) => {
+  if (!shouldAnimateMotion()) {
+    return;
+  }
+
+  pointerClientX = event.clientX;
+  pointerClientY = event.clientY;
+  if (pointerResetTimer) {
+    clearTimeout(pointerResetTimer);
+  }
+  pointerResetTimer = setTimeout(() => {
+    updateMotion(0, 0);
+  }, POINTER_REST_DELAY_MS);
+
+  if (pointerFrameId != null) {
+    return;
+  }
+
+  pointerFrameId = requestAnimationFrame(() => {
+    pointerFrameId = null;
+    const nx = ((pointerClientX / window.innerWidth) - 0.5) * 2;
+    const ny = ((pointerClientY / window.innerHeight) - 0.5) * 2;
+    updateMotion(nx, ny);
+  });
+}, { passive: true });
+
+document.addEventListener("visibilitychange", () => {
+  syncRuntimeState();
+  if (!document.hidden) {
+    refreshCollection().catch(() => {});
+  }
+});
+
+if (typeof motionMediaQuery.addEventListener === "function") {
+  motionMediaQuery.addEventListener("change", () => {
+    syncRuntimeState();
+  });
+}
 
 monthTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
@@ -591,9 +932,13 @@ monthTabs.forEach((tab) => {
   });
 });
 
-orbit.addEventListener("click", (event) => {
-  const target = event.target.closest("[data-src]");
+document.addEventListener("click", (event) => {
+  const target = event.target.closest(".orbit [data-src]");
   if (!target) {
+    return;
+  }
+
+  if (!activeOrbit || target.closest("[data-orbit]") !== activeOrbit) {
     return;
   }
 
