@@ -1,6 +1,5 @@
 const CENTER_IMAGE_NAME = "anillo.png";
 const DEFAULT_COLLECTION_SOURCE = "photos.json";
-const DEFAULT_COLLECTION_DIRECTORY = "./";
 const VIDEO_EXT_RE = /\.(mp4|webm|ogg|mov|m4v)$/i;
 const MEDIA_EXT_RE = /\.(png|jpe?g|webp|gif|bmp|avif|mp4|webm|ogg|mov|m4v)$/i;
 const SYNC_INTERVAL_MS = 30000;
@@ -26,7 +25,6 @@ let activeOrbit = null;
 let activeRingButton = null;
 let activeRingImage = null;
 let activeCollectionSource = DEFAULT_COLLECTION_SOURCE;
-let activeCollectionDirectory = DEFAULT_COLLECTION_DIRECTORY;
 let activePhotos = [];
 let activeCards = [];
 let previousSignature = "";
@@ -60,13 +58,6 @@ function isAbortError(error) {
   return Boolean(error && typeof error === "object" && error.name === "AbortError");
 }
 
-function normalizeDirectoryPath(directory) {
-  if (!directory || directory === ".") {
-    return "./";
-  }
-  return directory.endsWith("/") ? directory : `${directory}/`;
-}
-
 function setActiveAlbumContext(month = activeMonth) {
   activeMonth = month;
   refreshGeneration += 1;
@@ -79,7 +70,6 @@ function setActiveAlbumContext(month = activeMonth) {
   activeRingButton = activeOrbit?.querySelector(".ring-center") || null;
   activeRingImage = activeRingButton?.querySelector("img") || null;
   activeCollectionSource = album?.dataset.source || DEFAULT_COLLECTION_SOURCE;
-  activeCollectionDirectory = normalizeDirectoryPath(album?.dataset.directory || DEFAULT_COLLECTION_DIRECTORY);
 
   if (!activeAlbum) {
     activePhotos = [];
@@ -386,90 +376,14 @@ async function readFromJson(source = DEFAULT_COLLECTION_SOURCE) {
   return normalized;
 }
 
-async function readFromDirectoryListing(directory = DEFAULT_COLLECTION_DIRECTORY) {
-  const baseDirectory = normalizeDirectoryPath(directory);
-  const response = await fetch(baseDirectory, {
-    cache: "no-store",
-    signal: activeRefreshController?.signal
-  });
-  if (!response.ok) {
-    throw new Error("listing-unavailable");
-  }
-
-  const html = await response.text();
-  const doc = new DOMParser().parseFromString(html, "text/html");
-  const files = [];
-  const baseUrl = new URL(baseDirectory, window.location.href);
-
-  doc.querySelectorAll("a[href]").forEach((anchor) => {
-    const rawHref = anchor.getAttribute("href");
-    if (!rawHref || rawHref.startsWith("#") || rawHref.startsWith("?") || rawHref.startsWith("../")) {
-      return;
-    }
-
-    let fileName = "";
-    try {
-      const url = new URL(rawHref, baseUrl);
-      fileName = decodeURIComponent(url.pathname.split("/").pop() || "");
-    } catch (_error) {
-      fileName = decodeURIComponent(rawHref.split("/").pop() || "");
-    }
-
-    if (fileName && MEDIA_EXT_RE.test(fileName)) {
-      files.push({
-        name: fileName,
-        src: `${baseDirectory}${fileName}`,
-        key: `${baseDirectory}${fileName}`.toLowerCase(),
-        kind: mediaKindFromName(fileName)
-      });
-    }
-  });
-
-  const uniqueMap = new Map();
-  files.forEach((item) => {
-    if (!uniqueMap.has(item.key)) {
-      uniqueMap.set(item.key, item);
-    }
-  });
-
-  const unique = Array.from(uniqueMap.values());
-  if (!unique.length) {
-    throw new Error("listing-empty");
-  }
-
-  const photos = unique
-    .sort((a, b) => a.name.localeCompare(b.name, "es", { numeric: true }))
-    .map((item, index) => ({
-      name: item.name,
-      src: item.src,
-      key: item.key,
-      kind: item.kind,
-      caption: `Momento ${index + 1}`
-    }));
-
-  return {
-    centerName: CENTER_IMAGE_NAME,
-    centerKey: CENTER_IMAGE_NAME.toLowerCase(),
-    centerSrc: CENTER_IMAGE_NAME,
-    photos
-  };
-}
-
-async function getCollection({ source = DEFAULT_COLLECTION_SOURCE, directory = DEFAULT_COLLECTION_DIRECTORY } = {}) {
+async function getCollection({ source = DEFAULT_COLLECTION_SOURCE } = {}) {
   try {
     return await readFromJson(source);
   } catch (jsonError) {
     if (isAbortError(jsonError)) {
       throw jsonError;
     }
-    try {
-      return await readFromDirectoryListing(directory);
-    } catch (listingError) {
-      if (isAbortError(listingError)) {
-        throw listingError;
-      }
-      return fallbackCollection();
-    }
+    return fallbackCollection();
   }
 }
 
@@ -777,8 +691,7 @@ async function refreshCollection({ forceShuffle = false } = {}) {
   const currentRingImage = activeRingImage;
   try {
     const collection = await getCollection({
-      source: activeCollectionSource,
-      directory: activeCollectionDirectory
+      source: activeCollectionSource
     });
 
     if (
