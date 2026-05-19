@@ -736,6 +736,13 @@
       background: linear-gradient(180deg, rgba(252, 244, 233, 0.96), rgba(220, 193, 164, 0.9));
       color: #7d5a39;
     }
+
+    .book-tab[data-month="3"].active {
+      border-color: rgba(70, 151, 178, 0.58);
+      box-shadow: 0 8px 18px rgba(39, 103, 128, 0.18), inset 0 0 0 1px rgba(226, 248, 252, 0.9);
+      background: linear-gradient(180deg, rgba(235, 252, 255, 0.96), rgba(133, 205, 223, 0.88));
+      color: #23657b;
+    }
   
     .month-page {
       display: none;
@@ -792,6 +799,24 @@
       --album-card-bg: rgba(255, 250, 244, 0.98);
       --album-card-tape: linear-gradient(180deg, rgba(250, 239, 225, 0.82), rgba(223, 194, 161, 0.72));
       --album-caption: #8f6543;
+    }
+
+    .album--month-3 {
+      --album-panel: rgba(207, 235, 241, 0.9);
+      --album-panel-border: rgba(91, 174, 196, 0.82);
+      --album-wash-1: rgba(242, 253, 255, 0.86);
+      --album-wash-2: rgba(170, 222, 234, 0.68);
+      --album-wash-3: rgba(111, 191, 212, 0.56);
+      --album-dash: rgba(44, 134, 160, 0.32);
+      --album-signature: rgba(31, 97, 118, 0.94);
+      --album-ring-1: rgba(252, 255, 255, 0.97);
+      --album-ring-2: rgba(187, 235, 244, 0.94);
+      --album-ring-3: rgba(72, 166, 191, 0.86);
+      --album-ring-shadow-1: rgba(231, 252, 255, 0.48);
+      --album-ring-shadow-2: rgba(113, 199, 220, 0.34);
+      --album-card-bg: rgba(248, 254, 255, 0.98);
+      --album-card-tape: linear-gradient(180deg, rgba(239, 253, 255, 0.84), rgba(158, 219, 233, 0.68));
+      --album-caption: #2e7890;
     }
 
     .album::before {
@@ -1455,6 +1480,7 @@
         <button class="book-tab active" type="button" data-month="1">Mes 1</button>
         <button class="book-tab" type="button" data-month="2">Mes 2</button>
         <button class="book-tab" type="button" data-month="3">Mes 3</button>
+        <button class="book-tab" type="button" data-month="4">Mes 4</button>
       </nav>
 
       <div class="month-page active" id="month-1" data-month-page="1">
@@ -1480,9 +1506,20 @@
       </div>
 
       <div class="month-page" id="month-3" data-month-page="3" aria-hidden="true">
-        <section class="upcoming" aria-label="Mes 3 proximamente">
+        <section class="album album--month-3" aria-label="Album romantico mes 3" data-album data-source="photos-3.json" data-directory="x-meses/mes-03/">
+          <div class="orbit" data-orbit>
+            <button class="ring-center" type="button" data-src="anillo.png" data-kind="image" aria-label="Abrir anillo">
+              <img src="anillo.png" alt="Anillo" loading="lazy" />
+            </button>
+          </div>
+          <p class="signature">Cada recuerdo contigo vale por mil</p>
+        </section>
+      </div>
+
+      <div class="month-page" id="month-4" data-month-page="4" aria-hidden="true">
+        <section class="upcoming" aria-label="Mes 4 proximamente">
           <div>
-            <h2>Mes 3</h2>
+            <h2>Mes 4</h2>
             <p>Proximamente...</p>
           </div>
         </section>
@@ -1522,4 +1559,3 @@
   <script src="script.js"></script>
 </body>
 </html>
-

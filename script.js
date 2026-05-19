@@ -102,7 +102,7 @@ function shouldSyncCollection() {
 }
 
 function shouldAutoplayAlbumVideos() {
-  return hasActiveAlbum() && activeMonth === "2" && !document.hidden;
+  return hasActiveAlbum() && activePhotos.some((item) => item.kind === "video") && !document.hidden;
 }
 
 function resetMotionState() {
@@ -1001,4 +1001,3 @@ lightbox.addEventListener("touchend", (event) => {
 
 ensureMotionPermissionButton();
 startMotionPhysics();
-
