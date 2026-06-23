@@ -13,6 +13,8 @@ const lightbox = document.getElementById("lightbox");
 const lightboxImage = document.getElementById("lightboxImage");
 const lightboxVideo = document.getElementById("lightboxVideo");
 const closeButton = document.getElementById("close");
+const backgroundMusic = document.getElementById("backgroundMusic");
+const musicToggle = document.getElementById("musicToggle");
 const monthTabs = Array.from(document.querySelectorAll(".book-tab"));
 const monthPages = Array.from(document.querySelectorAll("[data-month-page]"));
 const defaultMonth = monthTabs.find((tab) => tab.classList.contains("active"))?.dataset.month
@@ -780,9 +782,39 @@ function syncRuntimeState() {
   }
 }
 
+function hideMusicToggle() {
+  musicToggle?.classList.remove("show");
+}
+
+function showMusicToggle() {
+  musicToggle?.classList.add("show");
+}
+
+function tryPlayBackgroundMusic({ fromGesture = false } = {}) {
+  if (!backgroundMusic) {
+    return;
+  }
+
+  backgroundMusic.volume = 0.68;
+  const playAttempt = backgroundMusic.play();
+  if (playAttempt && typeof playAttempt.then === "function") {
+    playAttempt
+      .then(hideMusicToggle)
+      .catch(() => {
+        if (fromGesture || !backgroundMusic.paused) {
+          return;
+        }
+        showMusicToggle();
+      });
+  } else {
+    hideMusicToggle();
+  }
+}
+
 setActiveAlbumContext(activeMonth);
 refreshCollection({ forceShuffle: true }).catch(() => {});
 syncRuntimeState();
+tryPlayBackgroundMusic();
 
 window.addEventListener("load", () => {
   if (!activeCards.length && !activeRefreshController) {
@@ -862,6 +894,16 @@ document.addEventListener("click", (event) => {
 });
 
 closeButton.addEventListener("click", closeLightbox);
+
+musicToggle?.addEventListener("click", () => {
+  tryPlayBackgroundMusic({ fromGesture: true });
+});
+
+backgroundMusic?.addEventListener("play", hideMusicToggle);
+
+document.addEventListener("pointerdown", () => {
+  tryPlayBackgroundMusic({ fromGesture: true });
+}, { once: true, passive: true });
 
 lightbox.addEventListener("click", (event) => {
   if (event.target === lightbox) {
