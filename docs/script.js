@@ -870,14 +870,22 @@ function emitBeatHeart(beatStrength = 0.5) {
 function maybeEmitBeatHeart(bass, level) {
   const now = performance.now();
   const beatRise = bass - smoothedMusicBass;
-  if (bass < 0.18 || beatRise < 0.045 || now - lastBeatHeartAt < 190) {
+  if (bass < 0.11 || beatRise < 0.025 || now - lastBeatHeartAt < 95) {
     return;
   }
 
   lastBeatHeartAt = now;
-  emitBeatHeart(Math.max(bass, level));
-  if (bass > 0.48 && Math.random() > 0.35) {
-    setTimeout(() => emitBeatHeart(Math.max(level, bass * 0.85)), 80);
+  const strength = Math.max(bass, level);
+  const burstCount = bass > 0.58 ? 5 : bass > 0.4 ? 4 : bass > 0.24 ? 3 : 2;
+
+  for (let index = 0; index < burstCount; index += 1) {
+    setTimeout(() => {
+      emitBeatHeart(Math.max(0.3, strength - (index * 0.05)));
+    }, index * 45);
+  }
+
+  if (bass > 0.5) {
+    setTimeout(() => emitBeatHeart(Math.max(level, bass * 0.9)), 190);
   }
 }
 
