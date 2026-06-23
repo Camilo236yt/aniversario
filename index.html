@@ -1145,7 +1145,7 @@
       z-index: 45;
       width: 42px;
       height: 42px;
-      display: none;
+      display: grid;
       place-items: center;
       border: 1px solid rgba(194, 126, 152, 0.6);
       border-radius: 999px;
@@ -1668,7 +1668,7 @@
 
   <audio id="backgroundMusic" src="audio/nuestra-historia.mp3" preload="auto" autoplay loop></audio>
   <button class="music-toggle" id="musicToggle" type="button" aria-label="Reproducir musica" title="Reproducir musica">
-    <span aria-hidden="true">&#9835;</span>
+    <span data-music-icon aria-hidden="true">&#9835;</span>
   </button>
 
   <div class="bubbles" aria-hidden="true">

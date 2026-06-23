@@ -884,12 +884,30 @@ function syncRuntimeState() {
   }
 }
 
+function updateMusicToggleState() {
+  if (!musicToggle) {
+    return;
+  }
+
+  const paused = !backgroundMusic || backgroundMusic.paused;
+  const label = paused ? "Reproducir musica" : "Pausar musica";
+  const icon = musicToggle.querySelector("[data-music-icon]");
+  musicToggle.classList.toggle("paused", paused);
+  musicToggle.setAttribute("aria-label", label);
+  musicToggle.title = label;
+  if (icon) {
+    icon.textContent = paused ? "\u266A" : "||";
+  }
+}
+
 function hideMusicToggle() {
   musicToggle?.classList.remove("show");
+  updateMusicToggleState();
 }
 
 function showMusicToggle() {
   musicToggle?.classList.add("show");
+  updateMusicToggleState();
 }
 
 function pauseBackgroundMusicForLightboxVideo() {
@@ -1207,15 +1225,31 @@ document.addEventListener("click", (event) => {
 closeButton.addEventListener("click", closeLightbox);
 
 musicToggle?.addEventListener("click", () => {
-  tryPlayBackgroundMusic({ fromGesture: true });
+  if (!backgroundMusic) {
+    return;
+  }
+
+  shouldResumeMusicAfterLightboxVideo = false;
+  if (backgroundMusic.paused) {
+    tryPlayBackgroundMusic({ fromGesture: true });
+  } else {
+    backgroundMusic.pause();
+    updateMusicToggleState();
+  }
 });
 
 backgroundMusic?.addEventListener("play", () => {
   hideMusicToggle();
   startMusicEffects();
 });
-backgroundMusic?.addEventListener("pause", stopMusicEffects);
-backgroundMusic?.addEventListener("ended", stopMusicEffects);
+backgroundMusic?.addEventListener("pause", () => {
+  stopMusicEffects();
+  updateMusicToggleState();
+});
+backgroundMusic?.addEventListener("ended", () => {
+  stopMusicEffects();
+  updateMusicToggleState();
+});
 
 document.addEventListener("pointerdown", () => {
   tryPlayBackgroundMusic({ fromGesture: true });
