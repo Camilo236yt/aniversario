@@ -16,6 +16,7 @@ const lightboxVideo = document.getElementById("lightboxVideo");
 const closeButton = document.getElementById("close");
 const backgroundMusic = document.getElementById("backgroundMusic");
 const musicToggle = document.getElementById("musicToggle");
+const beatHearts = document.getElementById("beatHearts");
 const monthTabs = Array.from(document.querySelectorAll(".book-tab"));
 const monthPages = Array.from(document.querySelectorAll("[data-month-page]"));
 const defaultMonth = monthTabs.find((tab) => tab.classList.contains("active"))?.dataset.month
@@ -53,6 +54,16 @@ let touchStartX = 0;
 let touchStartY = 0;
 let refreshGeneration = 0;
 let activeRefreshController = null;
+let audioContext = null;
+let audioSource = null;
+let audioAnalyser = null;
+let audioData = null;
+let musicFrameId = null;
+let smoothedMusicLevel = 0;
+let smoothedMusicBass = 0;
+let smoothedMusicMid = 0;
+let smoothedMusicTreble = 0;
+let lastBeatHeartAt = 0;
 
 function mediaKindFromName(name) {
   return VIDEO_EXT_RE.test(name) ? "video" : "image";
@@ -877,6 +888,175 @@ function showMusicToggle() {
   musicToggle?.classList.add("show");
 }
 
+function setMusicVariables({ level = 0, bass = 0, mid = 0, treble = 0 } = {}) {
+  const root = document.documentElement;
+  root.style.setProperty("--music-level", level.toFixed(3));
+  root.style.setProperty("--music-bass", bass.toFixed(3));
+  root.style.setProperty("--music-mid", mid.toFixed(3));
+  root.style.setProperty("--music-treble", treble.toFixed(3));
+}
+
+function resetMusicVariables() {
+  smoothedMusicLevel = 0;
+  smoothedMusicBass = 0;
+  smoothedMusicMid = 0;
+  smoothedMusicTreble = 0;
+  setMusicVariables();
+}
+
+function averageAudioBins(start, end) {
+  if (!audioData) {
+    return 0;
+  }
+
+  const last = Math.min(end, audioData.length);
+  if (start >= last) {
+    return 0;
+  }
+
+  let total = 0;
+  for (let index = start; index < last; index += 1) {
+    total += audioData[index];
+  }
+  return total / ((last - start) * 255);
+}
+
+function emitBeatHeart(beatStrength = 0.5) {
+  if (!beatHearts) {
+    return;
+  }
+
+  const heart = document.createElement("span");
+  heart.className = "beat-heart";
+  const strength = Math.min(Math.max(beatStrength, 0.25), 1);
+  const x = 10 + Math.random() * 80;
+  const drift = (Math.random() - 0.5) * 34;
+  const size = 18 + strength * 28 + Math.random() * 12;
+  const duration = 1.7 + Math.random() * 0.7;
+  const rotate = -28 + Math.random() * 56;
+  const spin = -42 + Math.random() * 84;
+  const hue = 338 + Math.random() * 18;
+  const light = 62 + Math.random() * 12;
+
+  heart.style.setProperty("--x", `${x.toFixed(1)}vw`);
+  heart.style.setProperty("--drift", `${drift.toFixed(1)}vw`);
+  heart.style.setProperty("--size", `${size.toFixed(1)}px`);
+  heart.style.setProperty("--dur", `${duration.toFixed(2)}s`);
+  heart.style.setProperty("--rot", `${rotate.toFixed(1)}deg`);
+  heart.style.setProperty("--spin", `${spin.toFixed(1)}deg`);
+  heart.style.setProperty("--beat", strength.toFixed(3));
+  heart.style.setProperty("--heart-hue", hue.toFixed(1));
+  heart.style.setProperty("--heart-light", `${light.toFixed(1)}%`);
+  beatHearts.appendChild(heart);
+
+  heart.addEventListener("animationend", () => {
+    heart.remove();
+  }, { once: true });
+}
+
+function maybeEmitBeatHeart(bass, level) {
+  const now = performance.now();
+  const beatRise = bass - smoothedMusicBass;
+  if (bass < 0.18 || beatRise < 0.045 || now - lastBeatHeartAt < 190) {
+    return;
+  }
+
+  lastBeatHeartAt = now;
+  emitBeatHeart(Math.max(bass, level));
+  if (bass > 0.48 && Math.random() > 0.35) {
+    setTimeout(() => emitBeatHeart(Math.max(level, bass * 0.85)), 80);
+  }
+}
+
+function initMusicAnalyser() {
+  if (audioAnalyser) {
+    return true;
+  }
+  if (!backgroundMusic) {
+    return false;
+  }
+
+  const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextCtor) {
+    return false;
+  }
+
+  try {
+    audioContext = new AudioContextCtor();
+    audioAnalyser = audioContext.createAnalyser();
+    audioAnalyser.fftSize = 128;
+    audioAnalyser.smoothingTimeConstant = 0.82;
+    audioSource = audioContext.createMediaElementSource(backgroundMusic);
+    audioSource.connect(audioAnalyser);
+    audioAnalyser.connect(audioContext.destination);
+    audioData = new Uint8Array(audioAnalyser.frequencyBinCount);
+    return true;
+  } catch (_error) {
+    audioContext = null;
+    audioSource = null;
+    audioAnalyser = null;
+    audioData = null;
+    return false;
+  }
+}
+
+function updateMusicEffects() {
+  if (!audioAnalyser || !audioData || !backgroundMusic || backgroundMusic.paused || document.hidden || motionMediaQuery.matches) {
+    stopMusicEffects();
+    return;
+  }
+
+  audioAnalyser.getByteFrequencyData(audioData);
+  const bass = averageAudioBins(0, 8);
+  const mid = averageAudioBins(8, 24);
+  const treble = averageAudioBins(24, audioData.length);
+  const level = Math.min(1, (bass * 0.48) + (mid * 0.34) + (treble * 0.18));
+  maybeEmitBeatHeart(bass, level);
+
+  smoothedMusicLevel += (level - smoothedMusicLevel) * 0.18;
+  smoothedMusicBass += (bass - smoothedMusicBass) * 0.2;
+  smoothedMusicMid += (mid - smoothedMusicMid) * 0.16;
+  smoothedMusicTreble += (treble - smoothedMusicTreble) * 0.14;
+
+  setMusicVariables({
+    level: smoothedMusicLevel,
+    bass: smoothedMusicBass,
+    mid: smoothedMusicMid,
+    treble: smoothedMusicTreble
+  });
+
+  musicFrameId = requestAnimationFrame(updateMusicEffects);
+}
+
+function startMusicEffects() {
+  if (!backgroundMusic || backgroundMusic.paused || motionMediaQuery.matches) {
+    return;
+  }
+
+  if (!initMusicAnalyser()) {
+    return;
+  }
+
+  document.body.classList.add("music-reactive");
+  if (audioContext?.state === "suspended") {
+    audioContext.resume().catch(() => {});
+  }
+
+  if (musicFrameId == null) {
+    musicFrameId = requestAnimationFrame(updateMusicEffects);
+  }
+}
+
+function stopMusicEffects() {
+  if (musicFrameId != null) {
+    cancelAnimationFrame(musicFrameId);
+    musicFrameId = null;
+  }
+  document.body.classList.remove("music-reactive");
+  beatHearts?.replaceChildren();
+  resetMusicVariables();
+}
+
 function tryPlayBackgroundMusic({ fromGesture = false } = {}) {
   if (!backgroundMusic) {
     return;
@@ -886,7 +1066,10 @@ function tryPlayBackgroundMusic({ fromGesture = false } = {}) {
   const playAttempt = backgroundMusic.play();
   if (playAttempt && typeof playAttempt.then === "function") {
     playAttempt
-      .then(hideMusicToggle)
+      .then(() => {
+        hideMusicToggle();
+        startMusicEffects();
+      })
       .catch(() => {
         if (fromGesture || !backgroundMusic.paused) {
           return;
@@ -895,6 +1078,7 @@ function tryPlayBackgroundMusic({ fromGesture = false } = {}) {
       });
   } else {
     hideMusicToggle();
+    startMusicEffects();
   }
 }
 
@@ -949,12 +1133,22 @@ document.addEventListener("visibilitychange", () => {
   syncRuntimeState();
   if (!document.hidden) {
     refreshCollection().catch(() => {});
+    if (backgroundMusic && !backgroundMusic.paused) {
+      startMusicEffects();
+    }
+  } else {
+    stopMusicEffects();
   }
 });
 
 if (typeof motionMediaQuery.addEventListener === "function") {
   motionMediaQuery.addEventListener("change", () => {
     syncRuntimeState();
+    if (motionMediaQuery.matches) {
+      stopMusicEffects();
+    } else if (backgroundMusic && !backgroundMusic.paused) {
+      startMusicEffects();
+    }
   });
 }
 
@@ -986,7 +1180,12 @@ musicToggle?.addEventListener("click", () => {
   tryPlayBackgroundMusic({ fromGesture: true });
 });
 
-backgroundMusic?.addEventListener("play", hideMusicToggle);
+backgroundMusic?.addEventListener("play", () => {
+  hideMusicToggle();
+  startMusicEffects();
+});
+backgroundMusic?.addEventListener("pause", stopMusicEffects);
+backgroundMusic?.addEventListener("ended", stopMusicEffects);
 
 document.addEventListener("pointerdown", () => {
   tryPlayBackgroundMusic({ fromGesture: true });
