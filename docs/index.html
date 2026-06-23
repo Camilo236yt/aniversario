@@ -466,7 +466,8 @@
       outline-offset: 3px;
     }
 
-    .ring-center img {
+    .ring-center img,
+    .ring-center video {
       width: 100%;
       height: 100%;
       object-fit: cover;
@@ -966,8 +967,8 @@
       <div class="month-page" id="month-2" data-month-page="2" aria-hidden="true">
         <section class="album album--month-2" aria-label="Album romantico mes 2" data-album data-source="photos-2.json">
           <div class="orbit" data-orbit>
-            <button class="ring-center" type="button" data-src="anillo.png" data-kind="image" aria-label="Abrir anillo">
-              <img src="anillo.png" alt="Anillo" loading="lazy" />
+            <button class="ring-center" type="button" data-src="x-meses/mes-02/WhatsApp Image 2026-04-07 at 8.40.42 PM.jpeg" data-kind="image" aria-label="Abrir momento 7 del mes 2">
+              <img alt="Momento 7 del mes 2" loading="lazy" decoding="async" />
             </button>
           </div>
           <p class="signature">Mi lugar favorito siempre sera a tu lado</p>
@@ -977,8 +978,8 @@
       <div class="month-page" id="month-3" data-month-page="3" aria-hidden="true">
         <section class="album album--month-3" aria-label="Album romantico mes 3" data-album data-source="photos-3.json">
           <div class="orbit" data-orbit>
-            <button class="ring-center" type="button" data-src="anillo.png" data-kind="image" aria-label="Abrir anillo">
-              <img src="anillo.png" alt="Anillo" loading="lazy" />
+            <button class="ring-center" type="button" data-src="x-meses/mes-03/WhatsApp Video 2026-05-18 at 10.18.22 PM.mp4" data-kind="video" aria-label="Abrir momento 15 del mes 3">
+              <video muted loop playsinline preload="none" aria-label="Momento 15 del mes 3"></video>
             </button>
           </div>
           <p class="signature">Cada recuerdo contigo vale por mil</p>
@@ -989,7 +990,7 @@
         <section class="album album--month-4" aria-label="Album romantico mes 4" data-album data-source="photos-4.json" data-directory="x-meses/mes-04/">
           <div class="orbit" data-orbit>
             <button class="ring-center" type="button" data-src="x-meses/mes-04/centro-mes-04.jpeg" data-kind="image" aria-label="Abrir pastel de cuarto mes">
-              <img src="x-meses/mes-04/centro-mes-04.jpeg" alt="Pastel del cuarto mes" loading="lazy" />
+              <img alt="Pastel del cuarto mes" loading="lazy" decoding="async" />
             </button>
           </div>
           <p class="signature">Cuatro meses de elegirnos</p>
@@ -1010,10 +1011,10 @@
   <div class="lightbox" id="lightbox" aria-hidden="true">
     <button class="close" id="close" type="button" aria-label="Cerrar">&times;</button>
     <img id="lightboxImage" alt="Foto ampliada" />
-    <video id="lightboxVideo" controls playsinline preload="metadata"></video>
+    <video id="lightboxVideo" controls playsinline preload="none"></video>
   </div>
 
-  <audio id="backgroundMusic" src="audio/nuestra-historia.mp3" preload="auto" autoplay loop></audio>
+  <audio id="backgroundMusic" src="audio/nuestra-historia.mp3" preload="none" autoplay loop></audio>
   <button class="music-toggle" id="musicToggle" type="button" aria-label="Reproducir musica" title="Reproducir musica">
     <span data-music-icon aria-hidden="true">&#9835;</span>
   </button>

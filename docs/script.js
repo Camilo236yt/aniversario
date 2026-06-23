@@ -2,7 +2,7 @@ const CENTER_IMAGE_NAME = "anillo.png";
 const DEFAULT_COLLECTION_SOURCE = "photos.json";
 const VIDEO_EXT_RE = /\.(mp4|webm|ogg|mov|m4v)$/i;
 const MEDIA_EXT_RE = /\.(png|jpe?g|webp|gif|bmp|avif|mp4|webm|ogg|mov|m4v)$/i;
-const SYNC_INTERVAL_MS = 30000;
+const SYNC_INTERVAL_MS = 120000;
 const LIMIT_STEP = 8;
 const RESIZE_SETTLE_MS = 120;
 const POINTER_REST_DELAY_MS = 140;
@@ -82,8 +82,15 @@ function setActiveAlbumContext(month = activeMonth) {
   activeAlbum = album;
   activeOrbit = album?.querySelector("[data-orbit]") || null;
   activeRingButton = activeOrbit?.querySelector(".ring-center") || null;
-  activeRingImage = activeRingButton?.querySelector("img") || null;
+  activeRingImage = activeRingButton?.querySelector("img, video") || null;
   activeCollectionSource = album?.dataset.source || DEFAULT_COLLECTION_SOURCE;
+
+  const ringSource = activeRingButton?.dataset.src || "";
+  const ringKind = activeRingButton?.dataset.kind || mediaKindFromName(ringSource);
+  const ringHasSource = Boolean(activeRingImage?.getAttribute("src") || activeRingImage?.currentSrc);
+  if (activeRingImage && ringSource && !ringHasSource) {
+    setRingCenterMedia(activeRingButton, ringSource, ringKind);
+  }
 
   if (!activeAlbum) {
     activePhotos = [];
@@ -156,7 +163,7 @@ function stopVideoPreviewPlayback(scope = activeOrbit) {
     return;
   }
 
-  scope.querySelectorAll(".photo video").forEach((video) => {
+  scope.querySelectorAll(".photo video, .ring-center video").forEach((video) => {
     video.pause();
   });
 }
@@ -313,8 +320,47 @@ function fallbackCollection() {
     centerName: CENTER_IMAGE_NAME,
     centerKey: CENTER_IMAGE_NAME,
     centerSrc: CENTER_IMAGE_NAME,
+    centerKind: "image",
     photos: []
   };
+}
+
+function setRingCenterMedia(button, src, kind = "image") {
+  if (!button) {
+    return null;
+  }
+
+  const normalizedKind = kind === "video" ? "video" : "image";
+  const expectedTag = normalizedKind === "video" ? "VIDEO" : "IMG";
+  let media = button.querySelector("img, video");
+
+  if (!media || media.tagName !== expectedTag) {
+    media?.remove();
+    media = document.createElement(normalizedKind === "video" ? "video" : "img");
+    button.appendChild(media);
+  }
+
+  if (normalizedKind === "video") {
+    media.src = src;
+    media.muted = true;
+    media.loop = true;
+    media.playsInline = true;
+    media.preload = "metadata";
+    media.disablePictureInPicture = true;
+    media.setAttribute("aria-label", "Momento central del album");
+    media.load();
+    media.play().catch(() => {});
+  } else {
+    media.src = src;
+    media.alt = "Momento central del album";
+    media.loading = "lazy";
+    media.decoding = "async";
+  }
+
+  button.dataset.src = src;
+  button.dataset.kind = normalizedKind;
+  activeRingImage = media;
+  return media;
 }
 
 function normalizeCollection(data) {
@@ -372,13 +418,14 @@ function normalizeCollection(data) {
     centerName,
     centerKey: centerName.toLowerCase(),
     centerSrc: centerName,
+    centerKind: mediaKindFromName(centerName),
     photos: unique
   };
 }
 
 async function readFromJson(source = DEFAULT_COLLECTION_SOURCE) {
   const response = await fetch(source, {
-    cache: "no-store",
+    cache: "default",
     signal: activeRefreshController?.signal
   });
   if (!response.ok) {
@@ -432,7 +479,7 @@ function renderPhotos() {
       video.muted = true;
       video.loop = true;
       video.playsInline = true;
-      video.preload = "metadata";
+      video.preload = "none";
       video.disablePictureInPicture = true;
       video.setAttribute("aria-hidden", "true");
       video.setAttribute("aria-label", item.caption || `Video ${index + 1}`);
@@ -443,6 +490,7 @@ function renderPhotos() {
       img.alt = item.caption || `Recuerdo ${index + 1}`;
       img.loading = "lazy";
       img.decoding = "async";
+      img.fetchPriority = "low";
       card.appendChild(img);
     }
 
@@ -729,9 +777,7 @@ async function refreshCollection({ forceShuffle = false } = {}) {
 
     closeLightbox();
     activePhotos = collection.photos;
-    currentRingButton.dataset.src = collection.centerSrc;
-    currentRingButton.dataset.kind = "image";
-    currentRingImage.src = collection.centerSrc;
+    setRingCenterMedia(currentRingButton, collection.centerSrc, collection.centerKind);
     previousSignature = signature;
 
     const nextLimitBucket = Math.max(1, Math.ceil(activePhotos.length / LIMIT_STEP));
