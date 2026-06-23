@@ -54,6 +54,7 @@ let touchStartX = 0;
 let touchStartY = 0;
 let refreshGeneration = 0;
 let activeRefreshController = null;
+let shouldResumeMusicAfterLightboxVideo = false;
 let audioContext = null;
 let audioSource = null;
 let audioAnalyser = null;
@@ -229,6 +230,7 @@ function openLightbox(src, altText, kind = "image") {
   currentLightboxIndex = activePhotos.findIndex((item) => item.src === src);
 
   if (kind === "video") {
+    pauseBackgroundMusicForLightboxVideo();
     lightboxImage.style.display = "none";
     lightboxImage.removeAttribute("src");
     lightboxVideo.style.display = "block";
@@ -238,6 +240,7 @@ function openLightbox(src, altText, kind = "image") {
     lightboxVideo.play().catch(() => {});
   } else {
     lightboxVideo.pause();
+    restoreBackgroundMusicAfterLightboxVideo();
     lightboxVideo.style.display = "none";
     lightboxVideo.removeAttribute("src");
     lightboxImage.style.display = "block";
@@ -252,6 +255,7 @@ function openLightbox(src, altText, kind = "image") {
 
 function closeLightbox() {
   lightboxVideo.pause();
+  restoreBackgroundMusicAfterLightboxVideo();
   lightboxVideo.style.display = "none";
   lightboxVideo.removeAttribute("src");
   lightboxImage.style.display = "block";
@@ -886,6 +890,24 @@ function hideMusicToggle() {
 
 function showMusicToggle() {
   musicToggle?.classList.add("show");
+}
+
+function pauseBackgroundMusicForLightboxVideo() {
+  if (!backgroundMusic || backgroundMusic.paused) {
+    return;
+  }
+
+  shouldResumeMusicAfterLightboxVideo = true;
+  backgroundMusic.pause();
+}
+
+function restoreBackgroundMusicAfterLightboxVideo() {
+  if (!shouldResumeMusicAfterLightboxVideo) {
+    return;
+  }
+
+  shouldResumeMusicAfterLightboxVideo = false;
+  tryPlayBackgroundMusic({ fromGesture: true });
 }
 
 function setMusicVariables({ level = 0, bass = 0, mid = 0, treble = 0 } = {}) {
