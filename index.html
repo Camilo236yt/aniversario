@@ -2929,15 +2929,15 @@
       }
 
       .book-nav {
-        width: 100%;
-        max-width: 100%;
+        width: calc(100vw - 0.9rem);
+        max-width: calc(100vw - 0.9rem);
         margin-inline: 0;
         justify-self: stretch;
         min-height: 0;
         display: grid;
-        grid-template-columns: repeat(6, minmax(0, 1fr));
-        gap: 0.12rem;
-        padding: 0.42rem;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.32rem 0.42rem;
+        padding: 0.48rem 0.55rem;
         overflow: hidden;
       }
 
@@ -2945,9 +2945,9 @@
       .book-tab:nth-child(even) {
         width: 100%;
         max-width: none;
-        min-height: 42px;
-        padding-inline: 0.1rem;
-        font-size: 0.61rem;
+        min-height: 40px;
+        padding-inline: 0.35rem;
+        font-size: 0.72rem;
       }
 
       .month-page,
