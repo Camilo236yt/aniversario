@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Nuestro Album</title>
   <link rel="icon" type="image/png" href="anillo.png" />
   <link rel="apple-touch-icon" href="anillo.png" />
@@ -2785,6 +2785,226 @@
       contain: layout style paint;
       backface-visibility: hidden;
     }
+
+    /* Navegación accesible del visor, optimizada para celulares */
+    .lightbox {
+      padding:
+        max(0.75rem, env(safe-area-inset-top))
+        max(0.75rem, env(safe-area-inset-right))
+        max(5.5rem, calc(env(safe-area-inset-bottom) + 4.5rem))
+        max(0.75rem, env(safe-area-inset-left));
+      touch-action: pan-y;
+    }
+
+    .lightbox img,
+    .lightbox video {
+      max-width: calc(100vw - 1.5rem);
+      max-height: calc(100dvh - 7.5rem);
+    }
+
+    .lightbox-nav {
+      position: fixed;
+      top: 50%;
+      z-index: 43;
+      width: 3.25rem;
+      height: 3.25rem;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 248, 235, 0.72);
+      border-radius: 50%;
+      background: rgba(120, 55, 77, 0.78);
+      color: #fffaf5;
+      font: 500 2rem/1 Georgia, serif;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(22, 8, 13, 0.34);
+      backdrop-filter: blur(8px);
+      transform: translateY(-50%);
+      transition: transform 160ms ease, background 160ms ease;
+      touch-action: manipulation;
+    }
+
+    .lightbox-nav:hover,
+    .lightbox-nav:focus-visible {
+      background: rgba(151, 67, 96, 0.94);
+      transform: translateY(-50%) scale(1.06);
+    }
+
+    .lightbox-nav:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+
+    .lightbox-prev {
+      left: max(0.75rem, env(safe-area-inset-left));
+    }
+
+    .lightbox-next {
+      right: max(0.75rem, env(safe-area-inset-right));
+    }
+
+    .lightbox-toolbar {
+      position: fixed;
+      left: 50%;
+      bottom: max(0.8rem, env(safe-area-inset-bottom));
+      z-index: 43;
+      min-width: 9rem;
+      padding: 0.48rem 1rem;
+      border: 1px solid rgba(255, 248, 235, 0.62);
+      border-radius: 999px;
+      background: rgba(83, 36, 53, 0.82);
+      color: #fff9f3;
+      text-align: center;
+      box-shadow: 0 10px 26px rgba(22, 8, 13, 0.3);
+      backdrop-filter: blur(10px);
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+
+    .lightbox-count {
+      display: block;
+      font-size: 0.92rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .lightbox-hint {
+      display: none;
+      margin-top: 0.12rem;
+      font-size: 0.72rem;
+      opacity: 0.78;
+    }
+
+    .close {
+      z-index: 44;
+      width: 3rem;
+      height: 3rem;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      border: 1px solid rgba(255, 248, 235, 0.58);
+      border-radius: 50%;
+      background: rgba(83, 36, 53, 0.78);
+      touch-action: manipulation;
+    }
+
+    .book-tab,
+    .photo,
+    .ring-center,
+    .music-toggle {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    @media (max-width: 640px) {
+      main {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        padding-inline: 0.45rem;
+        overflow: hidden;
+      }
+
+      header {
+        width: 100%;
+        min-width: 0;
+        padding-inline: 0.25rem;
+      }
+
+      h1 {
+        max-width: 100%;
+        font-size: clamp(2.35rem, 11.5vw, 2.85rem);
+        white-space: nowrap;
+      }
+
+      .subtitle {
+        max-width: 100%;
+        padding-inline: 0.55rem;
+        font-size: clamp(0.8rem, 3.7vw, 0.96rem);
+      }
+
+      .book {
+        width: 100%;
+        min-width: 0;
+        gap: 0.45rem;
+      }
+
+      .book-nav {
+        width: 100%;
+        max-width: 100%;
+        margin-inline: 0;
+        justify-self: stretch;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 0.12rem;
+        padding: 0.42rem;
+        overflow: hidden;
+      }
+
+      .book-tab,
+      .book-tab:nth-child(even) {
+        width: 100%;
+        max-width: none;
+        min-height: 42px;
+        padding-inline: 0.1rem;
+        font-size: 0.61rem;
+      }
+
+      .month-page,
+      .album,
+      .upcoming {
+        width: 100%;
+        min-width: 0;
+      }
+
+      .lightbox {
+        padding-inline: 0.45rem;
+        padding-bottom: max(5rem, calc(env(safe-area-inset-bottom) + 4.25rem));
+      }
+
+      .lightbox img,
+      .lightbox video {
+        width: auto;
+        max-width: calc(100vw - 0.9rem);
+        max-height: calc(100dvh - 6.5rem);
+        border-radius: 10px;
+      }
+
+      .lightbox-nav {
+        top: auto;
+        bottom: max(0.7rem, env(safe-area-inset-bottom));
+        width: 3.15rem;
+        height: 3.15rem;
+        transform: none;
+      }
+
+      .lightbox-nav:hover,
+      .lightbox-nav:focus-visible {
+        transform: scale(1.05);
+      }
+
+      .lightbox-prev {
+        left: max(0.7rem, env(safe-area-inset-left));
+      }
+
+      .lightbox-next {
+        right: max(0.7rem, env(safe-area-inset-right));
+      }
+
+      .lightbox-toolbar {
+        bottom: max(0.72rem, env(safe-area-inset-bottom));
+        padding-block: 0.38rem;
+      }
+
+      .lightbox-hint {
+        display: block;
+      }
+
+      .close {
+        top: max(0.55rem, env(safe-area-inset-top));
+        right: max(0.55rem, env(safe-area-inset-right));
+      }
+    }
   </style>
 </head>
 <body>
@@ -2876,8 +3096,14 @@
 
   <div class="lightbox" id="lightbox" aria-hidden="true">
     <button class="close" id="close" type="button" aria-label="Cerrar">&times;</button>
+    <button class="lightbox-nav lightbox-prev" id="lightboxPrev" type="button" aria-label="Ver momento anterior">&#8249;</button>
     <img id="lightboxImage" alt="Foto ampliada" />
     <video id="lightboxVideo" controls playsinline preload="none"></video>
+    <button class="lightbox-nav lightbox-next" id="lightboxNext" type="button" aria-label="Ver momento siguiente">&#8250;</button>
+    <div class="lightbox-toolbar" aria-live="polite">
+      <span class="lightbox-count" id="lightboxCount">Momento central</span>
+      <span class="lightbox-hint">Desliza para navegar</span>
+    </div>
   </div>
 
   <audio id="backgroundMusic" src="audio/nuestra-historia.mp3" preload="none" autoplay loop></audio>

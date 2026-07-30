@@ -38,6 +38,9 @@ const lightbox = document.getElementById("lightbox");
 const lightboxImage = document.getElementById("lightboxImage");
 const lightboxVideo = document.getElementById("lightboxVideo");
 const closeButton = document.getElementById("close");
+const lightboxPrev = document.getElementById("lightboxPrev");
+const lightboxNext = document.getElementById("lightboxNext");
+const lightboxCount = document.getElementById("lightboxCount");
 const backgroundMusic = document.getElementById("backgroundMusic");
 const musicToggle = document.getElementById("musicToggle");
 const beatHearts = document.getElementById("beatHearts");
@@ -268,6 +271,7 @@ function syncVideoPreviewPlayback() {
 
 function openLightbox(src, altText, kind = "image") {
   currentLightboxIndex = activePhotos.findIndex((item) => item.src === src);
+  updateLightboxNavigation();
 
   if (kind === "video") {
     pauseBackgroundMusicForLightboxVideo();
@@ -303,6 +307,22 @@ function closeLightbox() {
   lightbox.setAttribute("aria-hidden", "true");
   document.body.style.overflow = "";
   currentLightboxIndex = -1;
+  updateLightboxNavigation();
+}
+
+function updateLightboxNavigation() {
+  const hasMoments = activePhotos.length > 0;
+  if (lightboxPrev) {
+    lightboxPrev.disabled = !hasMoments;
+  }
+  if (lightboxNext) {
+    lightboxNext.disabled = !hasMoments;
+  }
+  if (lightboxCount) {
+    lightboxCount.textContent = currentLightboxIndex >= 0
+      ? `Momento ${currentLightboxIndex + 1} de ${activePhotos.length}`
+      : "Momento central";
+  }
 }
 
 function openLightboxByIndex(index) {
@@ -313,6 +333,16 @@ function openLightboxByIndex(index) {
   const wrapped = ((index % activePhotos.length) + activePhotos.length) % activePhotos.length;
   const item = activePhotos[wrapped];
   openLightbox(item.src, item.caption || `Momento ${wrapped + 1}`, item.kind || "image");
+}
+
+function navigateLightbox(direction) {
+  if (!activePhotos.length) {
+    return;
+  }
+  const nextIndex = currentLightboxIndex < 0
+    ? (direction > 0 ? 0 : activePhotos.length - 1)
+    : currentLightboxIndex + direction;
+  openLightboxByIndex(nextIndex);
 }
 
 function activateMonth(month) {
@@ -1313,6 +1343,8 @@ document.addEventListener("click", (event) => {
 });
 
 closeButton.addEventListener("click", closeLightbox);
+lightboxPrev?.addEventListener("click", () => navigateLightbox(-1));
+lightboxNext?.addEventListener("click", () => navigateLightbox(1));
 
 musicToggle?.addEventListener("click", () => {
   if (!backgroundMusic) {
@@ -1359,9 +1391,9 @@ document.addEventListener("keydown", (event) => {
     return;
   }
   if (event.key === "ArrowRight") {
-    openLightboxByIndex(currentLightboxIndex + 1);
+    navigateLightbox(1);
   } else if (event.key === "ArrowLeft") {
-    openLightboxByIndex(currentLightboxIndex - 1);
+    navigateLightbox(-1);
   }
 });
 
@@ -1387,9 +1419,9 @@ lightbox.addEventListener("touchend", (event) => {
   // Horizontal swipe to switch media.
   if (absX > 45 && absX > absY * 1.2) {
     if (dx < 0) {
-      openLightboxByIndex(currentLightboxIndex + 1);
+      navigateLightbox(1);
     } else {
-      openLightboxByIndex(currentLightboxIndex - 1);
+      navigateLightbox(-1);
     }
   }
 }, { passive: true });
