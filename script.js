@@ -1335,6 +1335,9 @@ if (typeof motionMediaQuery.addEventListener === "function") {
 monthTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     activateMonth(tab.dataset.month || "1");
+    if (mobilePerformanceQuery.matches) {
+      tab.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
   });
 });
 

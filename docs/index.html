@@ -2934,20 +2934,32 @@
         margin-inline: 0;
         justify-self: stretch;
         min-height: 0;
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 0.32rem 0.42rem;
-        padding: 0.48rem 0.55rem;
-        overflow: hidden;
+        display: flex;
+        justify-content: flex-start;
+        flex-wrap: nowrap;
+        gap: 0.6rem;
+        padding: 0.55rem 0.65rem;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: none;
+        overscroll-behavior-x: contain;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .book-nav::-webkit-scrollbar {
+        display: none;
       }
 
       .book-tab,
       .book-tab:nth-child(even) {
-        width: 100%;
-        max-width: none;
-        min-height: 40px;
-        padding-inline: 0.35rem;
-        font-size: 0.72rem;
+        flex: 0 0 104px;
+        width: 104px;
+        max-width: 104px;
+        min-height: 44px;
+        padding-inline: 0.55rem;
+        font-size: 0.78rem;
+        scroll-snap-align: center;
       }
 
       .month-page,
