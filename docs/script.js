@@ -32,6 +32,7 @@ const POINTER_REST_DELAY_MS = 140;
 const MOTION_FRAME_MS = 1000 / 30;
 const IS_FILE_PROTOCOL = window.location.protocol === "file:";
 const motionMediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+const mobilePerformanceQuery = window.matchMedia("(max-width: 700px), (pointer: coarse)");
 
 const lightbox = document.getElementById("lightbox");
 const lightboxImage = document.getElementById("lightboxImage");
@@ -133,7 +134,10 @@ function hasActiveAlbum() {
 }
 
 function shouldAnimateMotion() {
-  return hasActiveAlbum() && !document.hidden && !motionMediaQuery.matches;
+  return hasActiveAlbum()
+    && !document.hidden
+    && !motionMediaQuery.matches
+    && !mobilePerformanceQuery.matches;
 }
 
 function shouldSyncCollection() {
@@ -223,7 +227,7 @@ function syncVideoPreviewPlayback() {
   }
 
   const videos = Array.from(activeOrbit.querySelectorAll(".photo video"));
-  if (!videos.length) {
+  if (!videos.length || mobilePerformanceQuery.matches) {
     return;
   }
 
@@ -1081,7 +1085,15 @@ function initMusicAnalyser() {
 }
 
 function updateMusicEffects() {
-  if (!audioAnalyser || !audioData || !backgroundMusic || backgroundMusic.paused || document.hidden || motionMediaQuery.matches) {
+  if (
+    !audioAnalyser
+    || !audioData
+    || !backgroundMusic
+    || backgroundMusic.paused
+    || document.hidden
+    || motionMediaQuery.matches
+    || mobilePerformanceQuery.matches
+  ) {
     stopMusicEffects();
     return;
   }
@@ -1109,7 +1121,7 @@ function updateMusicEffects() {
 }
 
 function startMusicEffects() {
-  if (!backgroundMusic || backgroundMusic.paused || motionMediaQuery.matches) {
+  if (!backgroundMusic || backgroundMusic.paused || motionMediaQuery.matches || mobilePerformanceQuery.matches) {
     return;
   }
 
