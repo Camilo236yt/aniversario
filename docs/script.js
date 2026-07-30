@@ -2,10 +2,34 @@ const CENTER_IMAGE_NAME = "anillo.png";
 const DEFAULT_COLLECTION_SOURCE = "photos.json";
 const VIDEO_EXT_RE = /\.(mp4|webm|ogg|mov|m4v)$/i;
 const MEDIA_EXT_RE = /\.(png|jpe?g|webp|gif|bmp|avif|mp4|webm|ogg|mov|m4v)$/i;
+const MONTH_5_DIRECTORY = "x-meses/meses-5/";
+const MONTH_5_COLLECTION = {
+  center: `${MONTH_5_DIRECTORY}WhatsApp Video 2026-07-29 at 6.21.17 PM.mp4`,
+  photos: [
+    "WhatsApp Image 2026-07-29 at 6.20.50 PM (1).jpeg",
+    "WhatsApp Image 2026-07-29 at 6.20.50 PM.jpeg",
+    "WhatsApp Image 2026-07-29 at 6.20.52 PM (1).jpeg",
+    "WhatsApp Image 2026-07-29 at 6.20.52 PM.jpeg",
+    "WhatsApp Image 2026-07-29 at 6.21.12 PM (1).jpeg",
+    "WhatsApp Image 2026-07-29 at 6.21.12 PM.jpeg",
+    "WhatsApp Image 2026-07-29 at 6.21.13 PM.jpeg",
+    "WhatsApp Image 2026-07-29 at 6.21.14 PM (1).jpeg",
+    "WhatsApp Image 2026-07-29 at 6.21.14 PM (2).jpeg",
+    "WhatsApp Image 2026-07-29 at 6.21.14 PM.jpeg",
+    "WhatsApp Image 2026-07-29 at 6.21.15 PM (1).jpeg",
+    "WhatsApp Image 2026-07-29 at 6.21.15 PM.jpeg",
+    "WhatsApp Image 2026-07-29 at 6.21.16 PM (1).jpeg",
+    "WhatsApp Image 2026-07-29 at 6.21.16 PM (2).jpeg",
+    "WhatsApp Image 2026-07-29 at 6.21.16 PM.jpeg",
+    "WhatsApp Video 2026-07-29 at 6.21.17 PM (1).mp4",
+    "WhatsApp Image 2026-07-29 at 6.21.17 PM.jpeg"
+  ].map((name) => `${MONTH_5_DIRECTORY}${name}`)
+};
 const SYNC_INTERVAL_MS = 120000;
 const LIMIT_STEP = 8;
 const RESIZE_SETTLE_MS = 120;
 const POINTER_REST_DELAY_MS = 140;
+const MOTION_FRAME_MS = 1000 / 30;
 const IS_FILE_PROTOCOL = window.location.protocol === "file:";
 const motionMediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
@@ -39,6 +63,7 @@ let resizeTimer = null;
 let motionTargetX = 0;
 let motionTargetY = 0;
 let motionAnimId = null;
+let lastMotionFrameAt = 0;
 let motionBound = false;
 let motionButton = null;
 let pointerFrameId = null;
@@ -113,7 +138,9 @@ function shouldSyncCollection() {
 }
 
 function shouldAutoplayAlbumVideos() {
-  return hasActiveAlbum() && activePhotos.some((item) => item.kind === "video") && !document.hidden;
+  return hasActiveAlbum()
+    && (activeRingButton?.dataset.kind === "video" || activePhotos.some((item) => item.kind === "video"))
+    && !document.hidden;
 }
 
 function resetMotionState() {
@@ -153,7 +180,7 @@ function stopMotionPhysics({ reset = false } = {}) {
   }
 }
 
-function stopVideoPreviewPlayback(scope = activeOrbit) {
+function stopVideoPreviewPlayback(scope = activeOrbit, { includeCenter = true } = {}) {
   if (videoCardObserver) {
     videoCardObserver.disconnect();
     videoCardObserver = null;
@@ -163,7 +190,8 @@ function stopVideoPreviewPlayback(scope = activeOrbit) {
     return;
   }
 
-  scope.querySelectorAll(".photo video, .ring-center video").forEach((video) => {
+  const selector = includeCenter ? ".photo video, .ring-center video" : ".photo video";
+  scope.querySelectorAll(selector).forEach((video) => {
     video.pause();
   });
 }
@@ -180,10 +208,15 @@ function playVideoPreview(video) {
 }
 
 function syncVideoPreviewPlayback() {
-  stopVideoPreviewPlayback();
+  stopVideoPreviewPlayback(activeOrbit, { includeCenter: false });
 
   if (!shouldAutoplayAlbumVideos() || !activeOrbit) {
     return;
+  }
+
+  const centerVideo = activeOrbit.querySelector(".ring-center video");
+  if (centerVideo) {
+    playVideoPreview(centerVideo);
   }
 
   const videos = Array.from(activeOrbit.querySelectorAll(".photo video"));
@@ -343,10 +376,14 @@ function setRingCenterMedia(button, src, kind = "image") {
   if (normalizedKind === "video") {
     media.src = src;
     media.muted = true;
+    media.defaultMuted = true;
+    media.autoplay = true;
     media.loop = true;
     media.playsInline = true;
     media.preload = "metadata";
     media.disablePictureInPicture = true;
+    media.setAttribute("autoplay", "");
+    media.setAttribute("muted", "");
     media.setAttribute("aria-label", "Momento central del album");
     media.load();
     media.play().catch(() => {});
@@ -446,6 +483,9 @@ async function getCollection({ source = DEFAULT_COLLECTION_SOURCE } = {}) {
   } catch (jsonError) {
     if (isAbortError(jsonError)) {
       throw jsonError;
+    }
+    if (source === "photos-5.json") {
+      return normalizeCollection(MONTH_5_COLLECTION);
     }
     return fallbackCollection();
   }
@@ -582,7 +622,10 @@ function startMotionPhysics() {
       stopMotionPhysics();
       return;
     }
-    applyMotion(now);
+    if (now - lastMotionFrameAt >= MOTION_FRAME_MS) {
+      lastMotionFrameAt = now;
+      applyMotion(now);
+    }
     motionAnimId = requestAnimationFrame(step);
   };
 
