@@ -32,7 +32,6 @@ const POINTER_REST_DELAY_MS = 140;
 const MOTION_FRAME_MS = 1000 / 30;
 const IS_FILE_PROTOCOL = window.location.protocol === "file:";
 const motionMediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-const mobilePerformanceQuery = window.matchMedia("(max-width: 700px), (pointer: coarse)");
 
 const lightbox = document.getElementById("lightbox");
 const lightboxImage = document.getElementById("lightboxImage");
@@ -134,10 +133,7 @@ function hasActiveAlbum() {
 }
 
 function shouldAnimateMotion() {
-  return hasActiveAlbum()
-    && !document.hidden
-    && !motionMediaQuery.matches
-    && !mobilePerformanceQuery.matches;
+  return hasActiveAlbum() && !document.hidden && !motionMediaQuery.matches;
 }
 
 function shouldSyncCollection() {
@@ -227,7 +223,7 @@ function syncVideoPreviewPlayback() {
   }
 
   const videos = Array.from(activeOrbit.querySelectorAll(".photo video"));
-  if (!videos.length || mobilePerformanceQuery.matches) {
+  if (!videos.length) {
     return;
   }
 
@@ -1092,7 +1088,6 @@ function updateMusicEffects() {
     || backgroundMusic.paused
     || document.hidden
     || motionMediaQuery.matches
-    || mobilePerformanceQuery.matches
   ) {
     stopMusicEffects();
     return;
@@ -1121,7 +1116,7 @@ function updateMusicEffects() {
 }
 
 function startMusicEffects() {
-  if (!backgroundMusic || backgroundMusic.paused || motionMediaQuery.matches || mobilePerformanceQuery.matches) {
+  if (!backgroundMusic || backgroundMusic.paused || motionMediaQuery.matches) {
     return;
   }
 
@@ -1247,9 +1242,6 @@ if (typeof motionMediaQuery.addEventListener === "function") {
 monthTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     activateMonth(tab.dataset.month || "1");
-    if (mobilePerformanceQuery.matches) {
-      tab.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-    }
   });
 });
 

@@ -2929,37 +2929,28 @@
       }
 
       .book-nav {
-        width: calc(100vw - 0.9rem);
-        max-width: calc(100vw - 0.9rem);
-        margin-inline: 0;
-        justify-self: stretch;
+        width: min(calc(100vw - 1rem), 420px);
+        max-width: calc(100vw - 1rem);
+        margin-inline: auto;
+        justify-self: center;
         min-height: 0;
-        display: flex;
-        justify-content: flex-start;
-        flex-wrap: nowrap;
-        gap: 0.6rem;
-        padding: 0.55rem 0.65rem;
-        overflow-x: auto;
-        overflow-y: hidden;
-        scroll-snap-type: x mandatory;
-        scrollbar-width: none;
-        overscroll-behavior-x: contain;
-        -webkit-overflow-scrolling: touch;
-      }
-
-      .book-nav::-webkit-scrollbar {
-        display: none;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.45rem 0.6rem;
+        padding: 0.58rem 0.65rem;
+        overflow: visible;
       }
 
       .book-tab,
       .book-tab:nth-child(even) {
-        flex: 0 0 104px;
-        width: 104px;
-        max-width: 104px;
-        min-height: 44px;
-        padding-inline: 0.55rem;
-        font-size: 0.78rem;
-        scroll-snap-align: center;
+        flex: none;
+        width: 100%;
+        min-width: 0;
+        max-width: none;
+        min-height: 48px;
+        padding: 0.45rem 0.7rem 0.45rem 1.7rem;
+        font-size: 0.86rem;
+        transform: none;
       }
 
       .month-page,
@@ -3018,43 +3009,6 @@
       }
     }
 
-    @media (max-width: 700px), (pointer: coarse) {
-      body {
-        background-attachment: scroll;
-      }
-
-      .bubbles,
-      .beat-hearts {
-        display: none !important;
-      }
-
-      .border-romance *,
-      .ring-center,
-      .photo,
-      .month-page.active,
-      header {
-        animation: none !important;
-      }
-
-      .book-nav,
-      .lightbox,
-      .lightbox-nav,
-      .lightbox-toolbar,
-      .signature {
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-      }
-
-      .border-romance *,
-      .orbit::before,
-      .orbit::after {
-        filter: none !important;
-      }
-
-      .photo {
-        transition: none;
-      }
-    }
   </style>
 </head>
 <body>
