@@ -430,8 +430,9 @@ function setRingCenterMedia(button, src, kind = "image") {
   } else {
     media.src = src;
     media.alt = "Momento central del album";
-    media.loading = "lazy";
+    media.loading = "eager";
     media.decoding = "async";
+    media.fetchPriority = "high";
   }
 
   button.dataset.src = src;

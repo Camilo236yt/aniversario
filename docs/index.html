@@ -6,10 +6,11 @@
   <title>Nuestro Album</title>
   <link rel="icon" type="image/png" href="anillo.png" />
   <link rel="apple-touch-icon" href="anillo.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Allura&family=Cormorant+Garamond:wght@400;500;600;700&display=swap" />
+  <link rel="preload" href="fondo/Copilot_20260310_012828.png" as="image" fetchpriority="high" />
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Allura&family=Cormorant+Garamond:wght@400;500;600;700&display=swap');
-
-    
     :root {
       --bg-rose: #f7e5ea;
       --bg-peach: #f8efe9;
@@ -3037,10 +3038,10 @@
         <section class="album" aria-label="Album romantico mes 1" data-album data-source="photos.json" data-directory="x-meses/mes-01/">
           <div class="orbit" data-orbit>
             <button class="ring-center" type="button" data-src="anillo.png" data-kind="image" aria-label="Abrir anillo">
-              <img src="anillo.png" alt="Anillo" loading="eager" />
+              <img src="anillo.png" alt="Anillo" loading="eager" decoding="async" fetchpriority="high" />
             </button>
           </div>
-          <p class="signature">Para siempre, tu y yo</p>
+          <p class="signature">Tú y yo, mi para siempre</p>
         </section>
       </div>
 
@@ -3051,7 +3052,7 @@
               <img alt="Momento 7 del mes 2" loading="lazy" decoding="async" />
             </button>
           </div>
-          <p class="signature">Mi lugar favorito siempre sera a tu lado</p>
+          <p class="signature">Contigo, todo se siente hogar</p>
         </section>
       </div>
 
@@ -3062,7 +3063,7 @@
               <video muted loop playsinline preload="none" aria-label="Momento 15 del mes 3"></video>
             </button>
           </div>
-          <p class="signature">Cada recuerdo contigo vale por mil</p>
+          <p class="signature">Cada instante lleva tu luz</p>
         </section>
       </div>
 
@@ -3073,7 +3074,7 @@
               <img alt="Pastel del cuarto mes" loading="lazy" decoding="async" />
             </button>
           </div>
-          <p class="signature">Cuatro meses de elegirnos</p>
+          <p class="signature">Elegirte es mi alegría</p>
         </section>
       </div>
 
@@ -3084,7 +3085,7 @@
               <video autoplay muted loop playsinline preload="metadata" aria-label="Momento 17 del quinto mes"></video>
             </button>
           </div>
-          <p class="signature">Cinco meses creciendo juntos</p>
+          <p class="signature">Nuestro amor sigue floreciendo</p>
         </section>
       </div>
 
@@ -3095,7 +3096,7 @@
               <img alt="Foto central del sexto mes" loading="lazy" decoding="async" />
             </button>
           </div>
-          <p class="signature">Seis meses escribiendo nuestra historia</p>
+          <p class="signature">Medio año, toda una vida</p>
         </section>
       </div>
 
@@ -3150,6 +3151,6 @@
     <div class="bubble"><svg class="heart" viewBox="0 0 32 32"><path d="M23.6 2c-3.363 0-6.258 2.736-7.599 5.594-1.342-2.858-4.237-5.594-7.601-5.594-4.637 0-8.4 3.764-8.4 8.401 0 9.433 9.516 11.906 16.001 21.232 6.13-9.268 15.999-12.1 15.999-21.232 0-4.637-3.763-8.401-8.4-8.401z"></path></svg></div>
   </div>
 
-  <script src="script.js"></script>
+  <script src="script.js" defer></script>
 </body>
 </html>
