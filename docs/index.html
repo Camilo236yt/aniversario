@@ -3022,6 +3022,131 @@
       }
     }
 
+    /* Tema blanco del séptimo mes: conserva estructura y animaciones. */
+    body.theme-month-7 {
+      --ink: #4f4c49;
+      --ink-soft: #706b67;
+      --accent: #d8d3ce;
+      --accent-soft: #f7f5f2;
+      --gold: #d8d0c5;
+      background-color: #fff;
+      color: #57534f;
+    }
+
+    body.theme-month-7::before {
+      opacity: 0.42;
+      filter: grayscale(1) brightness(1.35);
+    }
+
+    body.theme-month-7::after {
+      background:
+        linear-gradient(90deg, rgba(255,255,255,.3), transparent 14%, transparent 86%, rgba(255,255,255,.3)),
+        linear-gradient(0deg, rgba(255,255,255,.22), transparent 22%);
+      mix-blend-mode: screen;
+    }
+
+    body.theme-month-7 h1,
+    body.theme-month-7 .subtitle,
+    body.theme-month-7 .signature {
+      color: #fff;
+      text-shadow: 0 1px 2px rgba(92,85,79,.72), 0 8px 22px rgba(255,255,255,.9);
+    }
+
+    body.theme-month-7 .subtitle {
+      border-color: rgba(255,255,255,.92);
+      background: rgba(255,255,255,.18);
+    }
+
+    body.theme-month-7 .book-nav {
+      border-color: rgba(255,255,255,.96);
+      background: rgba(255,255,255,.72);
+      box-shadow: 0 12px 30px rgba(108,101,95,.18), inset 0 1px 0 #fff;
+    }
+
+    body.theme-month-7 .book-tab {
+      color: #77716c;
+      border-color: transparent;
+      background: transparent;
+    }
+
+    body.theme-month-7 .book-tab:hover {
+      color: #504c49;
+      background: rgba(255,255,255,.78);
+    }
+
+    body.theme-month-7 .book-tab.active {
+      color: #514d49;
+      border-color: #fff;
+      background: linear-gradient(180deg, #fff, #f0eeeb);
+      box-shadow: 0 5px 16px rgba(93,87,81,.2), inset 0 0 0 1px #fff;
+    }
+
+    body.theme-month-7 .album,
+    body.theme-month-7 .upcoming {
+      border-color: rgba(255,255,255,.96);
+      box-shadow: 0 24px 64px rgba(97,91,85,.18), inset 0 0 0 1px rgba(255,255,255,.95);
+    }
+
+    body.theme-month-7 .photo {
+      border-color: #fff;
+      background: #fff;
+      box-shadow: 0 16px 34px rgba(91,85,80,.17);
+    }
+
+    body.theme-month-7 .caption {
+      color: #69645f;
+    }
+
+    body.theme-month-7 .border-romance,
+    body.theme-month-7 .border-garden,
+    body.theme-month-7 .single-flower,
+    body.theme-month-7 .edge-flower {
+      filter: grayscale(1) brightness(1.75) drop-shadow(0 8px 18px rgba(118,111,105,.16));
+    }
+
+    body.theme-month-7 .border-romance::before,
+    body.theme-month-7 .border-romance::after {
+      border-color: rgba(255,255,255,.94);
+      background: linear-gradient(to bottom, rgba(255,255,255,.72), transparent 18%, transparent 82%, rgba(255,255,255,.72));
+      box-shadow: inset 0 0 0 1px #fff, 0 0 22px rgba(255,255,255,.88);
+    }
+
+    body.theme-month-7 .bubble {
+      animation-name: love-burst-white;
+    }
+
+    body.theme-month-7 .bubble .heart {
+      animation-name: love-white;
+    }
+
+    body.theme-month-7 .beat-heart {
+      background: #fff;
+      box-shadow: inset 0 0 0 1px rgba(190,184,178,.42), 0 8px 18px rgba(255,255,255,.72);
+      filter: drop-shadow(0 8px 14px rgba(106,100,94,.2));
+    }
+
+    body.theme-month-7 .music-toggle,
+    body.theme-month-7 .motion-toggle {
+      color: #5c5752;
+      border-color: #fff;
+      background: rgba(255,255,255,.9);
+      box-shadow: 0 8px 22px rgba(99,93,87,.18);
+    }
+
+    @keyframes love-burst-white {
+      50%, 100% {
+        box-shadow: inset 0 0 0 0 rgba(255,255,255,.96);
+        transform: translate(0, 0) scale(1);
+      }
+    }
+
+    @keyframes love-white {
+      50% {
+        fill: #fff;
+        opacity: 1;
+      }
+    }
+
   </style>
 </head>
 <body>
