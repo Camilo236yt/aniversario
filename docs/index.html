@@ -1604,6 +1604,18 @@
       }
     }
 
+    body.theme-month-7 { background-image: linear-gradient(rgba(255,255,255,.2), rgba(255,255,255,.2)), url("optimized/anillos-promesa-mes-7.webp"); }
+    .album--month-7 {
+      --album-panel: rgba(255,255,255,.88); --album-panel-border: rgba(211,203,196,.94);
+      --album-wash-1: rgba(255,255,255,.7); --album-wash-2: rgba(250,248,246,.62); --album-wash-3: rgba(238,233,228,.52);
+      --album-dash: rgba(166,155,146,.3); --album-signature: rgba(86,81,77,.96); --album-caption: #625c57;
+      background-image: linear-gradient(rgba(255,255,255,.36), rgba(255,255,255,.36)), url("optimized/anillos-promesa-mes-7.webp");
+      background-size: cover; background-position: center;
+    }
+    @media (max-width: 700px) {
+      body.theme-month-7, body.theme-month-7 .album--month-7 { background-image: linear-gradient(rgba(255,255,255,.18), rgba(255,255,255,.18)), url("optimized/anillos-promesa-mes-7-mobile.webp"); }
+    }
+
     /* Propuesta visual: edición romántica editorial */
     body {
       background-image:
@@ -3032,6 +3044,7 @@
         <button class="book-tab" type="button" data-month="5">Mes 5</button>
         <button class="book-tab" type="button" data-month="6">Mes 6</button>
         <button class="book-tab" type="button" data-month="7">Mes 7</button>
+        <button class="book-tab" type="button" data-month="8">Mes 8</button>
       </nav>
 
       <div class="month-page active" id="month-1" data-month-page="1">
@@ -3101,11 +3114,15 @@
       </div>
 
       <div class="month-page" id="month-7" data-month-page="7" aria-hidden="true">
-        <section class="upcoming" aria-label="Mes 7 proximamente">
-          <div>
-            <h2>Mes 7</h2>
-            <p>Próximamente...</p>
-          </div>
+        <section class="album album--month-7" aria-label="Album del anillo de promesa, mes 7" data-album data-source="photos-7.json" data-directory="x-meses/meses-7/">
+          <div class="orbit" data-orbit><button class="ring-center" type="button" data-src="anillo.png" data-kind="image" aria-label="Abrir anillo de promesa"><img src="optimized/anillo.webp" alt="Anillo de promesa" loading="lazy" decoding="async" /></button></div>
+          <p class="signature">Una promesa para seguir eligiéndonos</p>
+        </section>
+      </div>
+
+      <div class="month-page" id="month-8" data-month-page="8" aria-hidden="true">
+        <section class="upcoming" aria-label="Mes 8 proximamente">
+          <div><h2>Mes 8</h2><p>Próximamente...</p></div>
         </section>
       </div>
     </section>

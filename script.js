@@ -34,6 +34,15 @@ const MOTION_FRAME_MS = 1000 / 30;
 const IS_FILE_PROTOCOL = window.location.protocol === "file:";
 const motionMediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
+function optimizedPreviewFor(src) {
+  if (typeof src !== "string" || VIDEO_EXT_RE.test(src)) return src;
+  const normalized = src.replace(/\\/g, "/");
+  const fileName = normalized.split("/").pop() || normalized;
+  if (fileName.toLowerCase() === CENTER_IMAGE_NAME.toLowerCase()) return "optimized/anillo.webp";
+  const relative = normalized.match(/x-meses\/(.+)\.[^.]+$/i)?.[1];
+  return relative ? `optimized/${relative}.webp` : src;
+}
+
 const lightbox = document.getElementById("lightbox");
 const lightboxImage = document.getElementById("lightboxImage");
 const lightboxVideo = document.getElementById("lightboxVideo");
@@ -214,6 +223,7 @@ function playVideoPreview(video) {
     return;
   }
 
+  if (!video.src && video.dataset.src) video.src = video.dataset.src;
   const playAttempt = video.play();
   if (playAttempt && typeof playAttempt.catch === "function") {
     playAttempt.catch(() => {});
@@ -349,6 +359,7 @@ function activateMonth(month) {
   const previousOrbit = activeOrbit;
   stopVideoPreviewPlayback(previousOrbit);
   setActiveAlbumContext(month);
+  document.body.classList.toggle("theme-month-7", month === "7");
 
   monthTabs.forEach((tab) => {
     tab.classList.toggle("active", tab.dataset.month === month);
@@ -414,7 +425,7 @@ function setRingCenterMedia(button, src, kind = "image") {
   }
 
   if (normalizedKind === "video") {
-    media.src = src;
+    media.src = optimizedPreviewFor(src);
     media.muted = true;
     media.defaultMuted = true;
     media.autoplay = true;
@@ -456,6 +467,7 @@ function normalizeCollection(data) {
         return {
           name,
           src: name,
+          previewSrc: optimizedPreviewFor(name),
           key: name.toLowerCase(),
           kind: mediaKindFromName(name),
           caption: `Momento ${index + 1}`
@@ -471,6 +483,7 @@ function normalizeCollection(data) {
         return {
           name: baseName,
           src,
+          previewSrc: typeof entry.preview === "string" && entry.preview.trim() ? entry.preview.trim() : optimizedPreviewFor(src),
           key: src.toLowerCase(),
           kind: mediaKindFromName(src),
           caption: typeof entry.caption === "string" && entry.caption.trim()
@@ -633,7 +646,7 @@ function renderPhotos() {
 
     if ((item.kind || "image") === "video") {
       const video = document.createElement("video");
-      video.src = item.src;
+      video.dataset.src = item.src;
       video.muted = true;
       video.loop = true;
       video.playsInline = true;
@@ -644,7 +657,7 @@ function renderPhotos() {
       card.appendChild(video);
     } else {
       const img = document.createElement("img");
-      img.src = item.src;
+      img.src = item.previewSrc || item.src;
       img.alt = item.caption || `Recuerdo ${index + 1}`;
       img.loading = "lazy";
       img.decoding = "async";

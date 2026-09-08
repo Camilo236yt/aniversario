@@ -1,5 +1,6 @@
 const CENTER_IMAGE_NAME = "anillo.png";
 const DEFAULT_COLLECTION_SOURCE = "photos.json";
+const DEFAULT_COLLECTION_DIRECTORY = "./";
 const VIDEO_EXT_RE = /\.(mp4|webm|ogg|mov|m4v)$/i;
 const MEDIA_EXT_RE = /\.(png|jpe?g|webp|gif|bmp|avif|mp4|webm|ogg|mov|m4v)$/i;
 const MONTH_5_DIRECTORY = "x-meses/meses-5/";
@@ -33,6 +34,15 @@ const MOTION_FRAME_MS = 1000 / 30;
 const IS_FILE_PROTOCOL = window.location.protocol === "file:";
 const motionMediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
+function optimizedPreviewFor(src) {
+  if (typeof src !== "string" || VIDEO_EXT_RE.test(src)) return src;
+  const normalized = src.replace(/\\/g, "/");
+  const fileName = normalized.split("/").pop() || normalized;
+  if (fileName.toLowerCase() === CENTER_IMAGE_NAME.toLowerCase()) return "optimized/anillo.webp";
+  const relative = normalized.match(/x-meses\/(.+)\.[^.]+$/i)?.[1];
+  return relative ? `optimized/${relative}.webp` : src;
+}
+
 const lightbox = document.getElementById("lightbox");
 const lightboxImage = document.getElementById("lightboxImage");
 const lightboxVideo = document.getElementById("lightboxVideo");
@@ -55,6 +65,7 @@ let activeOrbit = null;
 let activeRingButton = null;
 let activeRingImage = null;
 let activeCollectionSource = DEFAULT_COLLECTION_SOURCE;
+let activeCollectionDirectory = DEFAULT_COLLECTION_DIRECTORY;
 let activePhotos = [];
 let activeCards = [];
 let previousSignature = "";
@@ -100,6 +111,13 @@ function isAbortError(error) {
   return Boolean(error && typeof error === "object" && error.name === "AbortError");
 }
 
+function normalizeDirectoryPath(directory) {
+  if (!directory || directory === ".") {
+    return "./";
+  }
+  return directory.endsWith("/") ? directory : `${directory}/`;
+}
+
 function setActiveAlbumContext(month = activeMonth) {
   activeMonth = month;
   refreshGeneration += 1;
@@ -112,6 +130,7 @@ function setActiveAlbumContext(month = activeMonth) {
   activeRingButton = activeOrbit?.querySelector(".ring-center") || null;
   activeRingImage = activeRingButton?.querySelector("img, video") || null;
   activeCollectionSource = album?.dataset.source || DEFAULT_COLLECTION_SOURCE;
+  activeCollectionDirectory = normalizeDirectoryPath(album?.dataset.directory || DEFAULT_COLLECTION_DIRECTORY);
 
   const ringSource = activeRingButton?.dataset.src || "";
   const ringKind = activeRingButton?.dataset.kind || mediaKindFromName(ringSource);
@@ -204,6 +223,7 @@ function playVideoPreview(video) {
     return;
   }
 
+  if (!video.src && video.dataset.src) video.src = video.dataset.src;
   const playAttempt = video.play();
   if (playAttempt && typeof playAttempt.catch === "function") {
     playAttempt.catch(() => {});
@@ -339,6 +359,7 @@ function activateMonth(month) {
   const previousOrbit = activeOrbit;
   stopVideoPreviewPlayback(previousOrbit);
   setActiveAlbumContext(month);
+  document.body.classList.toggle("theme-month-7", month === "7");
 
   monthTabs.forEach((tab) => {
     tab.classList.toggle("active", tab.dataset.month === month);
@@ -404,7 +425,7 @@ function setRingCenterMedia(button, src, kind = "image") {
   }
 
   if (normalizedKind === "video") {
-    media.src = src;
+    media.src = optimizedPreviewFor(src);
     media.muted = true;
     media.defaultMuted = true;
     media.autoplay = true;
@@ -446,6 +467,7 @@ function normalizeCollection(data) {
         return {
           name,
           src: name,
+          previewSrc: optimizedPreviewFor(name),
           key: name.toLowerCase(),
           kind: mediaKindFromName(name),
           caption: `Momento ${index + 1}`
@@ -461,6 +483,7 @@ function normalizeCollection(data) {
         return {
           name: baseName,
           src,
+          previewSrc: typeof entry.preview === "string" && entry.preview.trim() ? entry.preview.trim() : optimizedPreviewFor(src),
           key: src.toLowerCase(),
           kind: mediaKindFromName(src),
           caption: typeof entry.caption === "string" && entry.caption.trim()
@@ -508,7 +531,77 @@ async function readFromJson(source = DEFAULT_COLLECTION_SOURCE) {
   return normalized;
 }
 
-async function getCollection({ source = DEFAULT_COLLECTION_SOURCE } = {}) {
+async function readFromDirectoryListing(directory = DEFAULT_COLLECTION_DIRECTORY) {
+  const baseDirectory = normalizeDirectoryPath(directory);
+  const response = await fetch(baseDirectory, {
+    cache: "default",
+    signal: activeRefreshController?.signal
+  });
+  if (!response.ok) {
+    throw new Error("listing-unavailable");
+  }
+
+  const html = await response.text();
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const files = [];
+  const baseUrl = new URL(baseDirectory, window.location.href);
+
+  doc.querySelectorAll("a[href]").forEach((anchor) => {
+    const rawHref = anchor.getAttribute("href");
+    if (!rawHref || rawHref.startsWith("#") || rawHref.startsWith("?") || rawHref.startsWith("../")) {
+      return;
+    }
+
+    let fileName = "";
+    try {
+      const url = new URL(rawHref, baseUrl);
+      fileName = decodeURIComponent(url.pathname.split("/").pop() || "");
+    } catch (_error) {
+      fileName = decodeURIComponent(rawHref.split("/").pop() || "");
+    }
+
+    if (fileName && MEDIA_EXT_RE.test(fileName)) {
+      files.push({
+        name: fileName,
+        src: `${baseDirectory}${fileName}`,
+        key: `${baseDirectory}${fileName}`.toLowerCase(),
+        kind: mediaKindFromName(fileName)
+      });
+    }
+  });
+
+  const uniqueMap = new Map();
+  files.forEach((item) => {
+    if (!uniqueMap.has(item.key)) {
+      uniqueMap.set(item.key, item);
+    }
+  });
+
+  const unique = Array.from(uniqueMap.values());
+  if (!unique.length) {
+    throw new Error("listing-empty");
+  }
+
+  const photos = unique
+    .sort((a, b) => a.name.localeCompare(b.name, "es", { numeric: true }))
+    .map((item, index) => ({
+      name: item.name,
+      src: item.src,
+      key: item.key,
+      kind: item.kind,
+      caption: `Momento ${index + 1}`
+    }));
+
+  return {
+    centerName: CENTER_IMAGE_NAME,
+    centerKey: CENTER_IMAGE_NAME.toLowerCase(),
+    centerSrc: CENTER_IMAGE_NAME,
+    centerKind: "image",
+    photos
+  };
+}
+
+async function getCollection({ source = DEFAULT_COLLECTION_SOURCE, directory = DEFAULT_COLLECTION_DIRECTORY } = {}) {
   try {
     return await readFromJson(source);
   } catch (jsonError) {
@@ -518,7 +611,14 @@ async function getCollection({ source = DEFAULT_COLLECTION_SOURCE } = {}) {
     if (source === "photos-5.json") {
       return normalizeCollection(MONTH_5_COLLECTION);
     }
-    return fallbackCollection();
+    try {
+      return await readFromDirectoryListing(directory);
+    } catch (listingError) {
+      if (isAbortError(listingError)) {
+        throw listingError;
+      }
+      return fallbackCollection();
+    }
   }
 }
 
@@ -546,7 +646,7 @@ function renderPhotos() {
 
     if ((item.kind || "image") === "video") {
       const video = document.createElement("video");
-      video.src = item.src;
+      video.dataset.src = item.src;
       video.muted = true;
       video.loop = true;
       video.playsInline = true;
@@ -557,7 +657,7 @@ function renderPhotos() {
       card.appendChild(video);
     } else {
       const img = document.createElement("img");
-      img.src = item.src;
+      img.src = item.previewSrc || item.src;
       img.alt = item.caption || `Recuerdo ${index + 1}`;
       img.loading = "lazy";
       img.decoding = "async";
@@ -830,7 +930,8 @@ async function refreshCollection({ forceShuffle = false } = {}) {
   const currentRingImage = activeRingImage;
   try {
     const collection = await getCollection({
-      source: activeCollectionSource
+      source: activeCollectionSource,
+      directory: activeCollectionDirectory
     });
 
     if (
