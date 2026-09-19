@@ -1,4 +1,5 @@
-﻿<!doctype html>
+﻿<!doctype html> 
+
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
@@ -3254,6 +3255,55 @@
         font-size: clamp(1.15rem, 5.4vw, 1.5rem);
       }
     }
+    .love-video-link {
+      position: relative;
+      z-index: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 0.58rem 1rem;
+      border: 1px solid rgba(255, 227, 174, 0.72);
+      border-radius: 999px;
+      color: #fff8eb;
+      background: linear-gradient(135deg, rgba(157, 72, 95, 0.94), rgba(196, 128, 73, 0.92));
+      box-shadow: 0 7px 15px rgba(95, 46, 48, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.36);
+      font: 700 clamp(0.78rem, 1.15vw, 0.98rem)/1 "Cormorant Garamond", Georgia, serif;
+      letter-spacing: 0.02em;
+      text-decoration: none;
+      text-shadow: 0 1px 2px rgba(71, 25, 34, 0.3);
+      transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .love-video-link::before {
+      content: "♡";
+      margin-right: 0.38rem;
+      font-size: 1.15em;
+      line-height: 1;
+    }
+
+    .love-video-link:hover,
+    .love-video-link:focus-visible {
+      color: #fff;
+      filter: brightness(1.08) saturate(1.06);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(95, 46, 48, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.42);
+    }
+
+    .love-video-link:focus-visible {
+      outline: 2px solid #fff1c5;
+      outline-offset: 3px;
+    }
+
+    @media (max-width: 640px) {
+      .love-video-link {
+        grid-column: 1 / -1;
+        width: 100%;
+        min-height: 44px;
+      }
+    }
 
   </style>
 </head>
@@ -3278,6 +3328,7 @@
         <button class="book-tab" type="button" data-month="6">Mes 6</button>
         <button class="book-tab" type="button" data-month="7">Mes 7</button>
         <button class="book-tab" type="button" data-month="8">Mes 8</button>
+        <a class="love-video-link" href="Amor Azul.html" aria-label="Abrir videoclip Amor y amistad">Amor y amistad</a>
       </nav>
 
       <div class="month-page active" id="month-1" data-month-page="1">
