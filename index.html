@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Nuestro Album</title>
+  <meta name="theme-color" content="#f7e5ea" />
+  <title>Nuestro Álbum</title>
   <link rel="icon" type="image/webp" href="optimized/anillo.webp" />
   <link rel="apple-touch-icon" href="anillo.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -3255,6 +3256,260 @@
       }
     }
 
+    /* Pulido editorial sobre la identidad romántica original. */
+    :root {
+      --ink: #563744;
+      --ink-soft: #755663;
+      --accent: #a95873;
+      --accent-soft: #f1d8df;
+      --shadow-soft: 0 22px 58px rgba(88, 48, 62, 0.16);
+      --shadow-card: 0 16px 34px rgba(76, 42, 52, 0.2);
+      color-scheme: light;
+    }
+
+    ::selection {
+      color: #fff;
+      background: #8c435b;
+    }
+
+    main {
+      width: min(1360px, 100%);
+    }
+
+    header {
+      position: relative;
+      z-index: 4;
+      margin-bottom: clamp(0.45rem, 1.1vw, 0.85rem);
+    }
+
+    h1 {
+      color: #823c54;
+      line-height: 1;
+      text-shadow: 0 3px 0 rgba(255, 255, 255, 0.66), 0 9px 24px rgba(122, 61, 82, 0.2);
+    }
+
+    .subtitle {
+      width: fit-content;
+      max-width: min(900px, 100%);
+      padding: 0.48rem 1.25rem 0.54rem;
+      border: 1px solid rgba(192, 128, 150, 0.2);
+      border-radius: 14px;
+      background: rgba(255, 250, 247, 0.88);
+      box-shadow: 0 8px 24px rgba(95, 53, 67, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.92);
+      color: #684454;
+    }
+
+    .book {
+      gap: clamp(0.55rem, 1vw, 0.85rem);
+    }
+
+    .book-nav {
+      position: relative;
+      z-index: 6;
+      width: fit-content;
+      max-width: 100%;
+      margin-inline: auto;
+      padding: 0.38rem 0.52rem;
+      gap: 0.3rem;
+      border: 1px solid rgba(255, 255, 255, 0.92);
+      border-radius: 999px;
+      background: rgba(255, 250, 247, 0.94);
+      box-shadow: 0 12px 28px rgba(92, 52, 65, 0.12), inset 0 1px 0 #fff;
+    }
+
+    .book-tab {
+      min-height: 44px;
+      border-color: transparent;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(247, 231, 236, 0.88));
+      color: #704656;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      transition: transform 180ms ease, color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+    }
+
+    .book-tab.active {
+      border-color: rgba(132, 57, 80, 0.8);
+      background: linear-gradient(135deg, #8c4059, #a24d66);
+      color: #fff;
+      box-shadow: 0 6px 15px rgba(116, 49, 70, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    }
+
+    .book-tab,
+    .book-tab:nth-child(even) {
+      flex: 0 0 auto;
+      width: auto;
+      min-width: 5.55rem;
+      padding-inline: 1.35rem 0.74rem;
+      white-space: nowrap;
+    }
+
+    .book-tab:focus-visible,
+    .music-toggle:focus-visible,
+    .motion-toggle:focus-visible,
+    .ring-center:focus-visible,
+    .photo:focus-visible,
+    .lightbox button:focus-visible {
+      outline: 3px solid #9b5c70;
+      outline-offset: 3px;
+    }
+
+    .album {
+      border-radius: 28px;
+      border-color: rgba(206, 170, 132, 0.62);
+      box-shadow: 0 24px 58px rgba(87, 57, 55, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.94);
+    }
+
+    .photo {
+      border: 1px solid rgba(179, 132, 110, 0.26);
+      border-radius: 14px;
+      padding: 0.55rem 0.55rem 0.72rem;
+      box-shadow: 0 17px 34px rgba(69, 42, 47, 0.2), 0 2px 5px rgba(69, 42, 47, 0.08);
+    }
+
+    .photo::before {
+      top: -9px;
+      border-radius: 4px;
+    }
+
+    .photo img {
+      border-radius: 8px;
+    }
+
+    .caption {
+      color: #795064;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.88);
+    }
+
+    .ring-center {
+      border: 1px solid rgba(255, 255, 255, 0.95);
+      box-shadow: 0 0 0 10px rgba(255, 255, 255, 0.86), 0 0 0 20px rgba(216, 177, 122, 0.19), 0 20px 38px rgba(77, 51, 46, 0.28);
+    }
+
+    .signature {
+      color: #78495d;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.94), 0 4px 10px rgba(91, 55, 69, 0.13);
+    }
+
+    .upcoming {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(205, 151, 171, 0.55);
+      border-radius: 28px;
+      background: radial-gradient(circle at 50% 44%, rgba(255, 255, 255, 0.8), transparent 35%), linear-gradient(145deg, rgba(255, 249, 247, 0.96), rgba(245, 222, 230, 0.88));
+      box-shadow: 0 24px 58px rgba(87, 57, 55, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    }
+
+    .upcoming h2 {
+      color: #843f58;
+      text-shadow: 0 2px 0 rgba(255, 255, 255, 0.8);
+    }
+
+    .upcoming p {
+      color: #664555;
+    }
+
+    .upcoming > div {
+      position: relative;
+      z-index: 3;
+    }
+
+    .music-toggle,
+    .motion-toggle {
+      min-height: 44px;
+      border-color: rgba(165, 94, 119, 0.45);
+      background: rgba(255, 250, 247, 0.96);
+      color: #6d4052;
+      box-shadow: 0 8px 20px rgba(82, 46, 60, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.96);
+      transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+    }
+
+    .music-toggle:hover,
+    .motion-toggle:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 11px 24px rgba(82, 46, 60, 0.2), inset 0 1px 0 #fff;
+    }
+
+    body.theme-month-7 .subtitle {
+      border-color: rgba(255, 255, 255, 0.95);
+      background: rgba(255, 255, 255, 0.84);
+      color: #564d47;
+    }
+
+    body.theme-month-7 .book-nav {
+      border-color: #fff;
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    body.theme-month-7 .book-tab {
+      color: #625a54;
+      background: rgba(255, 255, 255, 0.7);
+    }
+
+    body.theme-month-7 .book-tab.active {
+      border-color: #fff;
+      background: linear-gradient(180deg, #fff, #eeece9);
+      color: #514b46;
+      box-shadow: 0 5px 14px rgba(93, 87, 81, 0.18), inset 0 0 0 1px #fff;
+    }
+
+    body.theme-month-7 .album {
+      border-color: rgba(255, 255, 255, 0.98);
+      box-shadow: 0 24px 58px rgba(91, 85, 80, 0.16), inset 0 1px 0 #fff;
+    }
+
+    body.theme-month-7 .caption,
+    body.theme-month-7 .signature {
+      color: #5d5650;
+    }
+
+    body.theme-month-7 .ring-center {
+      box-shadow: 0 0 0 10px rgba(255, 255, 255, 0.95), 0 0 0 20px rgba(255, 255, 255, 0.48), 0 20px 38px rgba(83, 77, 72, 0.22);
+    }
+
+    @media (min-width: 701px) and (max-width: 1050px) {
+      .book-nav {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scroll-snap-type: x proximity;
+        scrollbar-width: thin;
+      }
+
+      .book-tab {
+        flex: 0 0 auto;
+        scroll-snap-align: start;
+      }
+    }
+
+    @media (max-width: 700px) {
+      main {
+        padding-inline: clamp(0.45rem, 2.5vw, 0.8rem);
+      }
+
+      .subtitle {
+        width: 100%;
+        max-width: 40rem;
+        border-radius: 12px;
+        padding: 0.4rem 0.65rem;
+      }
+
+      .book-nav {
+        border-radius: 20px;
+        padding: 0.32rem;
+      }
+
+      .book-tab,
+      .book-tab:nth-child(even) {
+        min-height: 46px;
+      }
+
+      .album,
+      .upcoming {
+        border-radius: 20px;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -3264,8 +3519,8 @@
 
   <main>
     <header>
-      <h1>Nuestro Album</h1>
-      <p class="subtitle">"Las muchas aguas no podran apagar el amor, ni lo ahogaran los rios." Cantares 8:7</p>
+      <h1>Nuestro Álbum</h1>
+      <p class="subtitle">"Las muchas aguas no podrán apagar el amor, ni lo ahogarán los ríos." Cantares 8:7</p>
     </header>
 
     <section class="book" aria-label="Libro de meses">
@@ -3279,6 +3534,7 @@
         <button class="book-tab" type="button" data-month="7">Mes 7</button>
         <button class="book-tab" type="button" data-month="8">Mes 8</button>
         <button class="book-tab" type="button" data-month="9">Mes 9</button>
+        <button class="book-tab" type="button" data-month="10">Mes 10</button>
       </nav>
 
       <div class="month-page active" id="month-1" data-month-page="1">
@@ -3296,7 +3552,7 @@
         <section class="album album--month-2" aria-label="Album romantico mes 2" data-album data-source="photos-2.json" data-directory="x-meses/mes-02/">
           <div class="orbit" data-orbit>
             <button class="ring-center" type="button" data-src="x-meses/mes-02/WhatsApp Image 2026-04-07 at 8.40.42 PM.jpeg" data-kind="image" aria-label="Abrir momento 7 del mes 2">
-              <img alt="Momento 7 del mes 2" loading="lazy" decoding="async" />
+              <img src="optimized/mes-02/WhatsApp Image 2026-04-07 at 8.40.42 PM.webp" alt="Momento 7 del mes 2" loading="lazy" decoding="async" />
             </button>
           </div>
           <p class="signature">Contigo, todo se siente hogar</p>
@@ -3318,7 +3574,7 @@
         <section class="album album--month-4" aria-label="Album romantico mes 4" data-album data-source="photos-4.json" data-directory="x-meses/mes-04/">
           <div class="orbit" data-orbit>
             <button class="ring-center" type="button" data-src="x-meses/mes-04/centro-mes-04.jpeg" data-kind="image" aria-label="Abrir pastel de cuarto mes">
-              <img alt="Pastel del cuarto mes" loading="lazy" decoding="async" />
+              <img src="optimized/mes-04/centro-mes-04.webp" alt="Pastel del cuarto mes" loading="lazy" decoding="async" />
             </button>
           </div>
           <p class="signature">Elegirte es mi alegría</p>
@@ -3340,7 +3596,7 @@
         <section class="album album--month-6" aria-label="Album romantico mes 6" data-album data-source="photos-6.json" data-directory="x-meses/meses-6/">
           <div class="orbit" data-orbit>
             <button class="ring-center" type="button" data-src="x-meses/meses-6/centro.jpeg" data-kind="image" aria-label="Abrir foto central del sexto mes">
-              <img alt="Foto central del sexto mes" loading="lazy" decoding="async" />
+              <img src="optimized/meses-6/centro.webp" alt="Foto central del sexto mes" loading="lazy" decoding="async" />
             </button>
           </div>
           <p class="signature">Medio año, toda una vida</p>
@@ -3375,13 +3631,19 @@
           <p class="signature">Y nuestra historia sigue creciendo</p>
         </section>
       </div>
+
+      <div class="month-page" id="month-10" data-month-page="10" aria-hidden="true">
+        <section class="upcoming" aria-label="Mes 10 próximamente">
+          <div><h2>Mes 10</h2><p>Próximamente...</p></div>
+        </section>
+      </div>
     </section>
   </main>
 
   <div class="lightbox" id="lightbox" aria-hidden="true">
     <button class="close" id="close" type="button" aria-label="Cerrar">&times;</button>
     <button class="lightbox-nav lightbox-prev" id="lightboxPrev" type="button" aria-label="Ver momento anterior">&#8249;</button>
-    <img id="lightboxImage" alt="Foto ampliada" />
+    <img id="lightboxImage" src="optimized/anillo.webp" alt="Foto ampliada" />
     <video id="lightboxVideo" controls playsinline preload="none"></video>
     <button class="lightbox-nav lightbox-next" id="lightboxNext" type="button" aria-label="Ver momento siguiente">&#8250;</button>
     <div class="lightbox-toolbar" aria-live="polite">
